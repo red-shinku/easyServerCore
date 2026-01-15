@@ -23,9 +23,9 @@ coro_t Coro_sheduler::run()
 {
     try
     {
-        for(int i = 0; i < ready_num; ++i)
+        for(auto& connfd: fdlist)
         {
-            auto &fddetail = coros.at(i);
+            auto &fddetail = coros.at(connfd);
             if(fddetail.care_event != fddetail.state)
                 continue;
             co_await *fddetail.coro;       
@@ -34,6 +34,7 @@ coro_t Coro_sheduler::run()
     catch(const std::out_of_range& e)
     {
         //FIXME: fd列表是单回合有效的，ET下发生异常将导致未处理的fd死去
+        //错误处理包在循环内？
         spdlog::error("run sheduler: Fd not found in coros map");
         std::cerr << e.what() << '\n';
     }

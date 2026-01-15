@@ -1,8 +1,6 @@
 // ----------------------------------------------------------
 // a coroutine sheduler for one thread.
 // It also responsible for the management of coro.
-// make sure the instance of Class Coro_sheduler is build-
-// on-heapmemory. 
 // ----------------------------------------------------------
 #pragma once
 

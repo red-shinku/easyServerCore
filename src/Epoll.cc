@@ -19,7 +19,7 @@ void Epoll::init()
     }
 }
 
-void Epoll::addfd(int connfd, EPOLL_EVENTS care_event)
+void Epoll::register_fd(int connfd, EPOLL_EVENTS care_event)
 {
     ev_sample.data.fd = connfd;
     ev_sample.events = care_event;
@@ -32,6 +32,11 @@ void Epoll::addfd(int connfd, EPOLL_EVENTS care_event)
             "Epoll.addfd failed"   
         );
     }
+}
+
+void Epoll::change_fd_event(int connfd, EPOLL_EVENTS care_event)
+{
+    
 }
 
 void Epoll::deletefd(int connfd)
@@ -61,7 +66,8 @@ std::tuple<Epoll::fdarray_t, int> Epoll::wait(fdarray_t&& fdlist)
     }
     for(int i =0; i< n; ++i)
     {
-        fdlist[i] = events[i].data.fd;
+        fdlist[i].first = events[i].data.fd;
+        fdlist[i].second = events[i].events;
     }
     return {std::move(fdlist), n};
 }

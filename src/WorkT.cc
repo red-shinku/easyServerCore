@@ -6,8 +6,10 @@
 using namespace easysv;
 
 WorkT::WorkT(std::function<int()> callbackfunc, Task_type& taskt):
-taskt(taskt), getfd(callbackfunc), worker([this]{ work(); })
+taskt(taskt), getfd(callbackfunc), epoll(), coro_sheduler()
 { 
+    epoll.init();
+    worker = std::thread([this] { work(); });
     spdlog::info("create a thread");
 }
 

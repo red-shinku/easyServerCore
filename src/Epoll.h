@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <array>
 #include <tuple>
 #include <sys/epoll.h>
@@ -26,12 +27,13 @@ public:
     Epoll& operator=(Epoll&&) = default;
 
     //this array create by outside, move in to handle
-    using fdarray_t = std::array<int, EventArraySize>;
+    using fdarray_t = std::array<std::pair<int, uint32_t>, EventArraySize>;
 
     //epoll_create1
     void init();
     //epoll_ctl
-    void addfd(int connfd, EPOLL_EVENTS care_event = EPOLLIN); 
+    void register_fd(int connfd, EPOLL_EVENTS care_event = EPOLLIN);
+    void change_fd_event(int connfd, EPOLL_EVENTS care_event);
     void deletefd(int connfd);
     //epoll_wait
     std::tuple<fdarray_t, int> wait(fdarray_t&& fdlist);

@@ -1,7 +1,7 @@
 #include "Coro_sheduler.h"
 
 #include <iostream>
-#include <coroutine>
+#include <cppcoro/sync_wait.hpp>
 #include <spdlog/spdlog.h>
 
 using namespace easysv;
@@ -15,28 +15,43 @@ Coro_sheduler::~Coro_sheduler()
 {
     for(auto &coro: coros)
     {
-        deletecoro(coro.first);
+        delete_coro(coro.first);
     }
 }
 
-coro_t Coro_sheduler::run()
+void Coro_sheduler::wait_read(int fd, handle_t coro_handle)
 {
-    try
+    //TODO: 如果状态变化修改epoll
+    coros.at(fd).state = EASYSV_READING;
+}
+
+void Coro_sheduler::wait_write(int fd, handle_t coro_handle)
+{
+    coros.at(fd).state = EASYSV_WRITING;
+}
+
+void Coro_sheduler::run()
+{
+    for(int i = 0; i < ready_num; ++i)
     {
-        for(auto& connfd: fdlist)
+        try
         {
-            auto &fddetail = coros.at(connfd);
-            if(fddetail.care_event != fddetail.state)
+            auto &fddetail = coros.at(fdlist[i].first);
+            if(fddetail.care_event & fdlist[i].second)
+            {
+                auto handle = cppcoro::sync_wait(*fddetail.coro_handle);
+                //FIXME: 保存返回的句柄，协程每次返回下一步状态，需要设置
+            }
+            else
                 continue;
-            co_await *fddetail.coro;       
+
         }
-    }
-    catch(const std::out_of_range& e)
-    {
-        //FIXME: fd列表是单回合有效的，ET下发生异常将导致未处理的fd死去
-        //错误处理包在循环内？
-        spdlog::error("run sheduler: Fd not found in coros map");
-        std::cerr << e.what() << '\n';
+        catch(const std::out_of_range& e)
+        {
+            spdlog::error("run sheduler: Fd not found in coros map");
+            std::cerr << e.what() << '\n';
+            continue;
+        }   
     }
 }
 
@@ -46,12 +61,12 @@ void Coro_sheduler::ready(Epoll::fdarray_t&& fdlist, int rdynum)
     ready_num = rdynum;
 }
 
-Epoll::fdarray_t Coro_sheduler::get_fdlist()
+Epoll::fdarray_t Coro_sheduler::return_fdlist()
 {
     return std::move(fdlist);
 }
 
-void Coro_sheduler::addcoro(int connfd, uint32_t care_event, coro_t* coro)
+void Coro_sheduler::register_coro(int connfd, uint32_t care_event, handle_t* coro)
 {
     try
     {
@@ -76,11 +91,11 @@ void Coro_sheduler::addcoro(int connfd, uint32_t care_event, coro_t* coro)
     
 }
 
-void Coro_sheduler::deletecoro(int connfd)
+void Coro_sheduler::delete_coro(int connfd)
 {
     if(coros.find(connfd) != coros.end())
     {
-        delete coros.at(connfd).coro;
+        delete coros.at(connfd).coro_handle;
         coros.erase(connfd);
         close(connfd); //FIXME: 处理close出错
     }

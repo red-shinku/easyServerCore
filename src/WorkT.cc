@@ -6,9 +6,8 @@
 using namespace easysv;
 
 WorkT::WorkT(std::function<int()> callbackfunc, Task_type& taskt):
-taskt(taskt), getfd(callbackfunc), epoll(), coro_sheduler()
+taskt(taskt), getfd(callbackfunc), coro_sheduler()
 { 
-    epoll.init();
     worker = std::thread([this] { work(); });
     spdlog::info("create a thread");
 }
@@ -24,26 +23,12 @@ WorkT::~WorkT()
         spdlog::warn("failed to delete thread");
 }
 
-void WorkT::register_epoll(int fd)
-{
-    try
-    {
-        epoll.addfd(fd, taskt.initial_care_event);
-    }
-    catch(const std::system_error& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-}
-
 void WorkT::register_coro(int fd)
 {
-    auto coro = new coro_t();
-    *coro = taskt.task_template(fd);
-    coro_sheduler.addcoro(
+    coro_sheduler.register_coro(
         fd, 
-        taskt.initial_care_event, 
-        coro);
+        taskt.task_template
+    );
 }
 
 void WorkT::handle_publicq()
@@ -55,26 +40,12 @@ void WorkT::handle_publicq()
     }
 }
 
-void WorkT::del_fd_in_epoll(int fd)
-{
-    try
-    {
-        epoll.deletefd(fd);
-    }
-    catch(const std::system_error& e)
-    {
-        std::cerr << e.what() << '\n'; 
-    }        
-}
-
 void WorkT::work()
 {
     while (true)
     {
         coro_sheduler.run();
         handle_publicq();
-        //wait epoll event
-        auto [fdlist, readynum] = epoll.wait(coro_sheduler.get_fdlist());
-        coro_sheduler.ready(std::move(fdlist), readynum);
+        coro_sheduler.ready_next_run();
     }
 }

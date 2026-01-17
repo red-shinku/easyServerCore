@@ -3,15 +3,14 @@
 #include <thread>
 #include <functional>
 #include "Coro_sheduler.h"
-#include "Epoll.h"
 
 namespace easysv
 {
 typedef struct Task_type
 {
-    //a function ptr, use to create coro
-    easysv::coro_t (*task_template)(int fd);
-    EPOLL_EVENTS initial_care_event;   
+    //a function pack, use to create coro
+    easysv::callable_coro_t task_template;
+    // EPOLL_EVENTS initial_care_event;   
 }Task_type;
 
 class WorkT
@@ -19,13 +18,11 @@ class WorkT
 private:
     //what this thread should do
     Task_type& taskt;
-    Epoll epoll;
     Coro_sheduler coro_sheduler;
     std::thread worker;
 
     //a call back function for getting fd from pool
     std::function<int()> getfd;
-    void register_epoll(int fd);
     void register_coro(int fd);
     //get new fd from public queue
     void handle_publicq();

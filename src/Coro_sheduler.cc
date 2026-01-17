@@ -8,8 +8,10 @@ using namespace easysv;
 
 //TODO: 初始化map
 Coro_sheduler::Coro_sheduler():
-fdlist(), coros{}, ready_num(0)
-{ }
+epoll(), fdlist(), coros{}, ready_num(0)
+{ 
+    epoll.init();
+}
 
 Coro_sheduler::~Coro_sheduler()
 {
@@ -21,13 +23,68 @@ Coro_sheduler::~Coro_sheduler()
 
 void Coro_sheduler::wait_read(int fd, handle_t coro_handle)
 {
-    //TODO: 如果状态变化修改epoll
-    coros.at(fd).state = EASYSV_READING;
+    //如果状态变化修改epoll
+    try
+    {
+        if(coros.at(fd).state == EPOLLOUT)
+        {
+            epoll.change_fd_event(fd, EPOLLIN);
+            coros.at(fd).state = EPOLLIN;
+        }
+    }
+    catch(const std::out_of_range& e)
+    {
+        spdlog::error("Coro_sheduler::wait_read: fd not found in coros map");
+        std::cerr << e.what() << '\n';
+    }
+    catch(const std::system_error& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
 }
 
 void Coro_sheduler::wait_write(int fd, handle_t coro_handle)
 {
-    coros.at(fd).state = EASYSV_WRITING;
+    try
+    {
+        if(coros.at(fd).state == EPOLLIN)
+        {
+            epoll.change_fd_event(fd, EPOLLOUT);
+            coros.at(fd).state = EPOLLOUT;
+        }
+    }
+    catch(const std::out_of_range& e)
+    {
+        spdlog::error("Coro_sheduler::wait_write: fd not found in coros map");
+        std::cerr << e.what() << '\n';
+    }
+    catch(const std::system_error& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+}
+
+void Coro_sheduler::register_wait_(int fd, handle_t coro_handle, EPOLL_EVENTS initial_care_event)
+{
+    try
+    {
+        if(coros.find(fd) != coros.end())
+        {
+            coros.emplace(fd, coro_handle, initial_care_event);
+            epoll.register_fd(fd, initial_care_event);
+        }
+        else
+            spdlog::warn("Coro_sheduler::register_wait_read: The FD {} has been register", fd);
+    }
+    catch(const std::bad_alloc& e)
+    {
+        spdlog::error("Coro_sheduler::register_wait_read: Register failed");
+        std::cerr << e.what() << '\n';
+    }
+    catch(const std::system_error& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
 }
 
 void Coro_sheduler::run()
@@ -37,14 +94,13 @@ void Coro_sheduler::run()
         try
         {
             auto &fddetail = coros.at(fdlist[i].first);
-            if(fddetail.care_event & fdlist[i].second)
+            if(fddetail.state == fdlist[i].second)
             {
-                auto handle = cppcoro::sync_wait(*fddetail.coro_handle);
-                //FIXME: 保存返回的句柄，协程每次返回下一步状态，需要设置
+                //协程运行
+                fddetail.coro_handle.resume();
             }
             else
                 continue;
-
         }
         catch(const std::out_of_range& e)
         {
@@ -55,27 +111,30 @@ void Coro_sheduler::run()
     }
 }
 
-void Coro_sheduler::ready(Epoll::fdarray_t&& fdlist, int rdynum)
-{
-    this->fdlist = fdlist;
-    ready_num = rdynum;
+void Coro_sheduler::ready_next_run()
+{   //wait epoll
+    try
+    {
+        auto [rfdlist, rdynum] = epoll.wait(std::move(fdlist));
+        this->fdlist = rfdlist;
+        ready_num = rdynum;
+    }
+    catch(const std::system_error& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
 }
 
-Epoll::fdarray_t Coro_sheduler::return_fdlist()
-{
-    return std::move(fdlist);
-}
-
-void Coro_sheduler::register_coro(int connfd, uint32_t care_event, handle_t* coro)
+void Coro_sheduler::register_coro(int connfd, callable_coro_t coro)
 {
     try
     {
         if(coros.find(connfd) == coros.end())
-        {
-            FdDetail fddetail = {
-                coro, care_event, EASYSV_WAIT
-            };
-            coros.emplace(connfd, fddetail);
+        {   //first run a coro and register
+            coro(
+                [this] -> Coro_sheduler& { return *this; } (),
+                connfd
+            ); 
         }
         else
         {
@@ -95,9 +154,16 @@ void Coro_sheduler::delete_coro(int connfd)
 {
     if(coros.find(connfd) != coros.end())
     {
-        delete coros.at(connfd).coro_handle;
-        coros.erase(connfd);
-        close(connfd); //FIXME: 处理close出错
+        try
+        {
+            epoll.deletefd(connfd);
+            coros.erase(connfd);
+            close(connfd); //FIXME: 处理close出错
+        }
+        catch(const std::system_error& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
     }
     else
     {

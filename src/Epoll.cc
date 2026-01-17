@@ -36,7 +36,17 @@ void Epoll::register_fd(int connfd, EPOLL_EVENTS care_event)
 
 void Epoll::change_fd_event(int connfd, EPOLL_EVENTS care_event)
 {
-    
+    ev_sample.data.fd = connfd;
+    ev_sample.events = care_event;
+    if(epoll_ctl(epfd, EPOLL_CTL_MOD, connfd, &ev_sample) == -1)
+    {
+        spdlog::error("failed to change epoll event");
+        throw std::system_error(
+            errno,                     
+            std::system_category(),
+            "Epoll.addfd failed"   
+        );
+    }
 }
 
 void Epoll::deletefd(int connfd)

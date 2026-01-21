@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <spdlog/spdlog.h>
 
+#define EPOLLMOD EPOLLET
+
 using namespace easysv;
 
 Epoll::Epoll():
@@ -13,7 +15,6 @@ void Epoll::init()
 {
     if((epfd = epoll_create1(0)) == -1)
     {
-        //TODO: 在程序开始spdlog::set_pattern 
         spdlog::error("failed to create epoll");  
         throw std::runtime_error("epoll_create1 error");
     }
@@ -22,7 +23,7 @@ void Epoll::init()
 void Epoll::register_fd(int connfd, EPOLL_EVENTS care_event)
 {
     ev_sample.data.fd = connfd;
-    ev_sample.events = care_event;
+    ev_sample.events = care_event | EPOLLMOD;
     if(epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev_sample) == -1)
     {
         spdlog::error("failed to add epoll");
@@ -37,7 +38,7 @@ void Epoll::register_fd(int connfd, EPOLL_EVENTS care_event)
 void Epoll::change_fd_event(int connfd, EPOLL_EVENTS care_event)
 {
     ev_sample.data.fd = connfd;
-    ev_sample.events = care_event;
+    ev_sample.events = care_event | EPOLLMOD;
     if(epoll_ctl(epfd, EPOLL_CTL_MOD, connfd, &ev_sample) == -1)
     {
         spdlog::error("failed to change epoll event");
@@ -65,7 +66,7 @@ void Epoll::deletefd(int connfd)
 std::tuple<Epoll::fdarray_t, int> Epoll::wait(fdarray_t&& fdlist)
 {
     int n = 0;
-    if((n = epoll_wait(epfd, events, Epoll::EventArraySize, 2700)) == -1)
+    if((n = epoll_wait(epfd, events, Epoll::EventArraySize, 500)) == -1)
     {
         spdlog::error("failed from epoll_wait()");
         throw std::system_error(

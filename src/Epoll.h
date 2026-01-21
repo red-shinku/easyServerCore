@@ -32,7 +32,7 @@ public:
     //epoll_create1
     void init();
     //epoll_ctl
-    void register_fd(int connfd, EPOLL_EVENTS care_event = EPOLLIN);
+    void register_fd(int connfd, EPOLL_EVENTS care_event);
     void change_fd_event(int connfd, EPOLL_EVENTS care_event);
     void deletefd(int connfd);
     //epoll_wait

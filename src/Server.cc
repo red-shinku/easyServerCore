@@ -10,6 +10,7 @@ using namespace easysv;
 Server::Server(int port, int listen_queue_size):
 LISTENQ(listen_queue_size), tpool(NULL)
 {
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [thread %t] %v");
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY); //handle all ip on this os
@@ -56,6 +57,13 @@ int Server::tcpsv_accept()
         spdlog::error("failed to accept connect sock");
         throw std::runtime_error("accept error");
     }
+    //set non-block I/O
+    int flags = fcntl(connfd, F_GETFL, 0);
+    if(flags == -1 || fcntl(connfd, F_SETFL, flags | O_NONBLOCK) == -1) 
+    {
+        spdlog::error("Server::tcpsv_accept: fcntl error");
+        throw std::system_error(errno, std::system_category(), "fcntl error");
+    }
     spdlog::info("accept new sock: {}", connfd);
     return connfd; 
 }
@@ -94,6 +102,10 @@ void Server::run()
             tpool->update_fd_queue(tcpsv_accept());
         }
         catch(const std::runtime_error& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+        catch(const std::system_error& e)
         {
             std::cerr << e.what() << '\n';
         }

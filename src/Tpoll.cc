@@ -13,7 +13,7 @@ thread_taskt(ttaskt)
     for (int i = 0; i < thread_num; ++i)
     {
         wthreads.emplace_back(
-            [this]{ callback_getfd(); },
+            [this]{ return callback_getfd(); },
             thread_taskt 
         );
     }

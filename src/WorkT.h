@@ -10,7 +10,7 @@ typedef struct Task_type
 {
     //a function pack, use to create coro
     easysv::callable_coro_t task_template;
-    // EPOLL_EVENTS initial_care_event;   
+    EPOLL_EVENTS initial_care_event;   
 }Task_type;
 
 class WorkT

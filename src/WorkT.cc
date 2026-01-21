@@ -6,7 +6,7 @@
 using namespace easysv;
 
 WorkT::WorkT(std::function<int()> callbackfunc, Task_type& taskt):
-taskt(taskt), getfd(callbackfunc), coro_sheduler()
+taskt(taskt), getfd(callbackfunc), coro_sheduler(taskt.initial_care_event)
 { 
     worker = std::thread([this] { work(); });
     spdlog::info("create a thread");
@@ -42,6 +42,7 @@ void WorkT::handle_publicq()
 
 void WorkT::work()
 {
+    //FIXME: 退出方案
     while (true)
     {
         coro_sheduler.run();

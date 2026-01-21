@@ -2,7 +2,7 @@
 
 #include <thread>
 #include <functional>
-#include "Coro_sheduler.h"
+#include "Coro_scheduler.h"
 
 namespace easysv
 {
@@ -18,7 +18,7 @@ class WorkT
 private:
     //what this thread should do
     Task_type& taskt;
-    Coro_sheduler coro_sheduler;
+    Coro_scheduler coro_sheduler;
     std::thread worker;
 
     //a call back function for getting fd from pool

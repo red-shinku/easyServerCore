@@ -4,7 +4,6 @@
 #include <array>
 #include <tuple>
 #include <sys/epoll.h>
-#include <cppcoro/task.hpp>
 
 namespace easysv
 {

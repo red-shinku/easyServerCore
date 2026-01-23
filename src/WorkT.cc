@@ -5,10 +5,14 @@
 
 using namespace easysv;
 
-WorkT::WorkT(std::function<int()> callbackfunc, Task_type& taskt):
-taskt(taskt), getfd(callbackfunc), coro_sheduler(taskt.initial_care_event)
+WorkT::WorkT(std::function<std::vector<int>()> cback_getfd, std::function<void()> cback_sidle, 
+                Task_type& taskt, int id, int efd):
+task_num(0), taskt(taskt), getfd(cback_getfd), say_idle(cback_sidle), 
+coro_sheduler(taskt.initial_care_event, task_num, notify_fd), 
+id(id), notify_fd(efd)
 { 
     worker = std::thread([this] { work(); });
+    coro_sheduler.register_notify_fd(notify_fd);
     spdlog::info("create a thread");
 }
 
@@ -29,12 +33,14 @@ void WorkT::register_coro(int fd)
         fd, 
         taskt.task_template
     );
+    ++task_num;
 }
 
 void WorkT::handle_publicq()
 {
     int fd = -1;
-    while ((fd = getfd()) != -1)
+    auto fds = getfd();
+    for(auto& fd: fds)
     {
         register_coro(fd);
     }
@@ -42,11 +48,19 @@ void WorkT::handle_publicq()
 
 void WorkT::work()
 {
-    //FIXME: 退出方案
+    //FIXME: 线程如何安全退出
     while (true)
     {
-        coro_sheduler.run();
-        handle_publicq();
         coro_sheduler.ready_next_run();
+        handle_publicq();
+        coro_sheduler.run();
+
+        if(task_num <= IS_IDLE_NUM && is_idle_now == false) 
+        {
+            is_idle_now == true;
+            say_idle();
+        }
+        else
+            is_idle_now == false;
     }
 }

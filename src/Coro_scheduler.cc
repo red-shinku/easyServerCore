@@ -1,14 +1,14 @@
 #include "Coro_scheduler.h"
 
 #include <iostream>
-#include <cppcoro/sync_wait.hpp>
 #include <spdlog/spdlog.h>
 
 using namespace easysv;
 
-Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event):
-epoll(), initial_care_event(initial_care_event), 
-fdlist(), coros{}, ending_queue(), ready_num(0)
+Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event, 
+                            int& task_num, int& notify_fd):
+epoll(), initial_care_event(initial_care_event), fdlist(), coros{}, 
+ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
 {
     epoll.init();
 }
@@ -82,6 +82,7 @@ void Coro_scheduler::unregister_coro(int connfd, handle_t handle)
         {
             std::cerr << e.what() << '\n';
         }
+        --task_num;
     }
     else
     {
@@ -102,6 +103,11 @@ void Coro_scheduler::run()
 {
     for(int i = 0; i < ready_num; ++i) {
         int fd = fdlist[i].first;
+        //遇到eventfd跳过
+        if(fd == notify_fd)
+        {
+            continue;
+        }
         auto it = coros.find(fd);
         if (it == coros.end()) continue; //has been unregister
 
@@ -150,5 +156,10 @@ void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
         std::cerr << e.what() << '\n';
     }
     
+}
+
+void Coro_scheduler::register_notify_fd(int efd)
+{
+    epoll.register_fd(efd, EPOLLIN);
 }
 

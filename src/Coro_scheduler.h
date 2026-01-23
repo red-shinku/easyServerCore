@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <functional>
 #include <coroutine>
-#include <cppcoro/task.hpp>
 #include "Epoll.h"
 
 namespace easysv 
@@ -107,6 +106,8 @@ private:
     std::unordered_map<int, FdDetail> coros;
     std::vector<handle_t> ending_queue;
     int ready_num;
+    int& task_num;
+    int& notify_fd;
 
     //use in initial_suspend
     void __register_coro__(int fd, handle_t);
@@ -119,7 +120,8 @@ private:
     void wait_event(int fd, handle_t, EPOLL_EVENTS state);
 
 public:
-    explicit Coro_scheduler(EPOLL_EVENTS initial_care_event);
+    explicit Coro_scheduler(EPOLL_EVENTS initial_care_event, 
+                            int& task_num, int& notify_fd);
     ~Coro_scheduler() noexcept;
     Coro_scheduler(const Coro_scheduler&) = delete;
     Coro_scheduler& operator=(const Coro_scheduler&) = delete;
@@ -133,6 +135,8 @@ public:
 
     //work thread call it to register coro
     void register_coro(int connfd, callable_coro_t coro);
+
+    void register_notify_fd(int efd);
 };
 
 struct Awaitable

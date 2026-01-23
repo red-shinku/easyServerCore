@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
 
@@ -19,6 +20,7 @@ LISTENQ(listen_queue_size), tpool(NULL)
 
 Server::~Server()
 {
+    delete tpool;
     close(listen_sock_fd);
 }
 
@@ -95,11 +97,11 @@ void Server::init(int thread_num, easysv::Task_type APP)
 
 void Server::run()
 {
-    while (true)
+    while (true) //FIXME: 如何安全关闭？
     {
         try
         {
-            tpool->update_fd_queue(tcpsv_accept());
+            tpool->accept_and_notice_thread(tcpsv_accept());
         }
         catch(const std::runtime_error& e)
         {

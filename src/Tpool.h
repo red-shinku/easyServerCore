@@ -8,6 +8,7 @@
 
 #define EACH_FD_GET_NUM 5
 #define PUB_FD_QUEUE_SIZE 300 
+#define PUB_FD_QUEUE_CRITICAL 10
 
 namespace easysv
 {
@@ -26,7 +27,7 @@ private:
 
     std::mutex pub_que_mtx;
     std::mutex idle_que_mtx;
-    std::condition_variable idle_que_cv;
+    // std::condition_variable idle_que_cv;
 
     std::vector<int> callback_getfds() noexcept;
     void callback_say_idle(int id);

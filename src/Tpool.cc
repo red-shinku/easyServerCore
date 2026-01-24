@@ -49,16 +49,17 @@ void Tpool::callback_say_idle(int id)
 
 void Tpool::accept_and_notice_thread(int connfd)
 {
+    //一整个操作的原子性质
     std::unique_lock<std::mutex> lock_pub_q(pub_que_mtx);
     std::unique_lock<std::mutex> lock_idle_q(idle_que_mtx);
 
-    while(pub_fd_queue.size() == PUB_FD_QUEUE_SIZE - 1 && idle_threads_id.empty())
-    {
-        idle_que_cv.wait(lock_pub_q);
-    }
+    // while(pub_fd_queue.size() == PUB_FD_QUEUE_SIZE - 1 && idle_threads_id.empty())
+    // {
+        // idle_que_cv.wait(lock_pub_q);
+    // }
     pub_fd_queue.push(connfd);
 
-    if(! idle_threads_id.empty()) //FIXME: 若不轮转初始化所有线程在队列中
+    if(! idle_threads_id.empty())
     {
         auto idle_id = idle_threads_id.front();
         idle_threads_id.pop();
@@ -67,12 +68,15 @@ void Tpool::accept_and_notice_thread(int connfd)
         uint64_t one = 1;
         write(wthreads[idle_id].notify_fd, &one, sizeof(one));
     }
-    // else
-    // {
-    //     //方案B: 没人有空，轮转处理，该方案与条件变量方案冲突
-    //    static int next = 0;
-    //     lock.unlock();
-    //     uint64_t one = 1;
-    //     write(wthreads[next++ % wthreads.size()].notify_fd, &one, sizeof(one));
-    // }
+    else if(pub_fd_queue.size() < PUB_FD_QUEUE_CRITICAL)
+    {
+        return; //无人有空且新连接堆积较少
+    }
+    else
+    {
+        //方案B: 没人有空且新连接堆积较多，轮转处理，该方案与条件变量方案冲突
+        static int next = 0;
+        uint64_t one = 1;
+        write(wthreads[next++ % wthreads.size()].notify_fd, &one, sizeof(one));
+    }
 }

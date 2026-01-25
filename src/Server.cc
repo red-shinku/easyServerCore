@@ -2,11 +2,19 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
 
 using namespace easysv;
+
+static bool sv_stop = false;
+
+static void when_sig_stop(int)
+{
+    sv_stop = true;
+}
 
 Server::Server(int port, int listen_queue_size):
 LISTENQ(listen_queue_size), tpool(NULL)
@@ -97,7 +105,10 @@ void Server::init(int thread_num, easysv::Task_type APP)
 
 void Server::run()
 {
-    while (true) //FIXME: 如何安全关闭？
+    signal(SIGINT, when_sig_stop);
+    signal(SIGTERM, when_sig_stop);
+
+    while (! sv_stop) 
     {
         try
         {

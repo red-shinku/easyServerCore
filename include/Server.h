@@ -28,7 +28,6 @@ public:
     ~Server() noexcept;
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
-    //TODO; 移动构造？
 
     void init(int thread_num, easysv::Task_type APP);
     void run();

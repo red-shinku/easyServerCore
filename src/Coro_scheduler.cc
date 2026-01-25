@@ -6,7 +6,7 @@
 using namespace easysv;
 
 Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event, 
-                            int& task_num, int& notify_fd):
+                            int& task_num, int notify_fd):
 epoll(), initial_care_event(initial_care_event), fdlist(), coros{}, 
 ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
 {
@@ -15,6 +15,7 @@ ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
 
 Coro_scheduler::~Coro_scheduler()
 {
+    //destroy all corotinues
     for(auto &coro: coros)
     {
         coro.second.coro_handle.destroy();
@@ -103,9 +104,11 @@ void Coro_scheduler::run()
 {
     for(int i = 0; i < ready_num; ++i) {
         int fd = fdlist[i].first;
-        //遇到eventfd跳过
+        //遇到eventfd重置计数后跳过
         if(fd == notify_fd)
         {
+            uint64_t zero;
+            read(fd, &zero, sizeof(zero));
             continue;
         }
         auto it = coros.find(fd);

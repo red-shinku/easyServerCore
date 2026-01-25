@@ -107,7 +107,7 @@ private:
     std::vector<handle_t> ending_queue;
     int ready_num;
     int& task_num;
-    int& notify_fd;
+    int notify_fd;
 
     //use in initial_suspend
     void __register_coro__(int fd, handle_t);
@@ -121,7 +121,7 @@ private:
 
 public:
     explicit Coro_scheduler(EPOLL_EVENTS initial_care_event, 
-                            int& task_num, int& notify_fd);
+                            int& task_num, int notify_fd);
     ~Coro_scheduler() noexcept;
     Coro_scheduler(const Coro_scheduler&) = delete;
     Coro_scheduler& operator=(const Coro_scheduler&) = delete;

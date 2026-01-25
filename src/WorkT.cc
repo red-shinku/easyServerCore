@@ -7,7 +7,7 @@ using namespace easysv;
 
 WorkT::WorkT(std::function<std::vector<int>()> cback_getfd, 
                 std::function<void()> cback_sidle, Task_type& taskt, 
-                int id, int efd, std::atomic<bool>& stopping_flag):
+                int id, int efd, std::atomic<bool>& stopping_flag) noexcept:
 task_num(0), taskt(taskt), getfd(cback_getfd), say_idle(cback_sidle), 
 coro_sheduler(taskt.initial_care_event, task_num, notify_fd), 
 id(id), notify_fd(efd), stopping(stopping_flag)

@@ -18,7 +18,7 @@ private:
 
 public:
     explicit Epoll(/* args */);
-    ~Epoll() noexcept = default;
+    ~Epoll();
     Epoll(const Epoll&) = delete;
     Epoll& operator=(const Epoll&) = delete;
     

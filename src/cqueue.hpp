@@ -1,5 +1,7 @@
 #include <atomic>
 #include <cstddef>
+#include <vector>
+#include <optional>
 #include <memory>
 #include <stdexcept>
 #include <iostream>

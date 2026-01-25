@@ -29,7 +29,7 @@ private:
     std::mutex idle_que_mtx;
     // std::condition_variable idle_que_cv;
 
-    std::vector<int> callback_getfds() noexcept;
+    std::vector<int> callback_getfds();
     void callback_say_idle(int id);
 
     std::atomic<bool> stopping;

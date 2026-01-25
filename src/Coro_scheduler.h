@@ -10,14 +10,13 @@
 #include <cstdint>
 #include <unordered_map>
 #include <functional>
+#include <exception>
 #include <coroutine>
 #include "Epoll.h"
 
 namespace easysv 
 {
 
-struct AwaitReadable;
-struct AwaitWriteable;
 class Coro_scheduler;
 
 class task 
@@ -33,40 +32,10 @@ public:
         int connfd;
         
         //when first run a coro, suspend at first and register it
-        auto initial_suspend() noexcept
-        {
-            struct AwaitFirst
-            {
-                bool await_ready() const noexcept { return false; }
-                void await_suspend(std::coroutine_handle<promise_type> h)
-                {
-                    h.promise().sched.__register_coro__(
-                        h.promise().connfd,
-                        h
-                    );
-                }
-                void await_resume() const noexcept {}
-            };
-            return AwaitFirst{};
-        }
+        auto initial_suspend() noexcept;
 
         //when co_return, put the handle in ending_queue
-        auto final_suspend() noexcept
-        { 
-            struct AwaitFinal
-            {
-                bool await_ready() const noexcept { return false; }
-                void await_suspend(std::coroutine_handle<promise_type> h)
-                {
-                    h.promise().sched.unregister_coro(
-                        h.promise().connfd,
-                        h
-                    );
-                }
-                void await_resume() const noexcept {}
-            };
-            return AwaitFinal{};
-        }
+        auto final_suspend() noexcept;
 
         task get_return_object() 
         { 
@@ -153,5 +122,39 @@ struct Awaitable
     { sched.wait_event(fd, coro_han, care_event); }
     void await_resume() noexcept { }
 };
+
+inline auto task::promise_type::initial_suspend() noexcept
+{
+    struct AwaitFirst
+    {
+        bool await_ready() const noexcept { return false; }
+        void await_suspend(std::coroutine_handle<promise_type> h)
+        {
+            h.promise().sched.__register_coro__(
+                h.promise().connfd,
+                h
+            );
+        }
+        void await_resume() const noexcept {}
+    };
+    return AwaitFirst{};
+}
+
+inline auto task::promise_type::final_suspend() noexcept
+{
+    struct AwaitFinal
+    {
+        bool await_ready() const noexcept { return false; }
+        void await_suspend(std::coroutine_handle<promise_type> h) noexcept
+        {
+            h.promise().sched.unregister_coro(
+                h.promise().connfd,
+                h
+            );
+        }
+        void await_resume() const noexcept {}
+    };
+    return AwaitFinal{};    
+}
 
 }

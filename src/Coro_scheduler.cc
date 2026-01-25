@@ -144,7 +144,7 @@ void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
         if(coros.find(connfd) == coros.end())
         {   //first run a coro and register
             coro(
-                [this] -> Coro_scheduler& { return *this; } (),
+                [this]() -> Coro_scheduler& { return *this; } (),
                 connfd
             ); 
         }

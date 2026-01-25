@@ -1,4 +1,4 @@
-#include "Server.h"
+#include "../include/Server.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -114,11 +114,11 @@ void Server::run()
         {
             tpool->accept_and_notice_thread(tcpsv_accept());
         }
-        catch(const std::runtime_error& e)
+        catch(const std::system_error& e)
         {
             std::cerr << e.what() << '\n';
         }
-        catch(const std::system_error& e)
+        catch(const std::runtime_error& e)
         {
             std::cerr << e.what() << '\n';
         }

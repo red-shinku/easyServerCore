@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thread>
+#include <atomic>
 #include <functional>
 #include "Coro_scheduler.h"
 
@@ -40,9 +41,12 @@ private:
     // function run in thread
     void work();
 
+    std::atomic<bool>& stopping;
+
 public:
     explicit WorkT(std::function<std::vector<int>()>, std::function<void()>, 
-                    Task_type& taskt, int id, int efd) noexcept;
+                    Task_type& taskt, int id, int efd, 
+                    std::atomic<bool>& stopping_flag) noexcept;
     ~WorkT() noexcept; 
     WorkT(const WorkT&) = delete;
     WorkT& operator=(const WorkT&) = delete;

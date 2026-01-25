@@ -5,11 +5,12 @@
 
 using namespace easysv;
 
-WorkT::WorkT(std::function<std::vector<int>()> cback_getfd, std::function<void()> cback_sidle, 
-                Task_type& taskt, int id, int efd):
+WorkT::WorkT(std::function<std::vector<int>()> cback_getfd, 
+                std::function<void()> cback_sidle, Task_type& taskt, 
+                int id, int efd, std::atomic<bool>& stopping_flag):
 task_num(0), taskt(taskt), getfd(cback_getfd), say_idle(cback_sidle), 
 coro_sheduler(taskt.initial_care_event, task_num, notify_fd), 
-id(id), notify_fd(efd)
+id(id), notify_fd(efd), stopping(stopping_flag)
 { 
     worker = std::thread([this] { work(); });
     coro_sheduler.register_notify_fd(notify_fd);
@@ -48,19 +49,18 @@ void WorkT::handle_publicq()
 
 void WorkT::work()
 {
-    //FIXME: 线程如何安全退出
-    while (true)
+    while (! stopping.load(std::memory_order_relaxed))
     {
         coro_sheduler.ready_next_run();
         handle_publicq();
         coro_sheduler.run();
 
         if(task_num <= IS_IDLE_NUM && is_idle_now == false) 
-        {
-            is_idle_now == true;
+        { //FIXME: 修改空闲定义
+            is_idle_now = true;
             say_idle();
         }
         else
-            is_idle_now == false;
+            is_idle_now = false;
     }
 }

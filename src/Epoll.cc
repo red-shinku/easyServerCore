@@ -11,6 +11,11 @@ Epoll::Epoll():
 ev_sample{0, 0}, epfd(0)
 { }
 
+Epoll::~Epoll()
+{
+    close(epfd);
+}
+
 void Epoll::init()
 {
     if((epfd = epoll_create1(0)) == -1)
@@ -66,6 +71,7 @@ void Epoll::deletefd(int connfd)
 std::tuple<Epoll::fdarray_t, int> Epoll::wait(fdarray_t&& fdlist)
 {
     int n = 0;
+    //FIXME: epoll wait 返回EINTR时重试
     if((n = epoll_wait(epfd, events, Epoll::EventArraySize, 500)) == -1)
     {
         spdlog::error("failed from epoll_wait()");

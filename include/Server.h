@@ -2,8 +2,8 @@
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include "Tpool.h"
-#include "WorkT.h"
+#include "../src/Tpool.h"
+#include "../src/WorkT.h"
 
 namespace easysv 
 {

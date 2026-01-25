@@ -8,7 +8,8 @@
 using namespace easysv;
 
 Tpool::Tpool(int thread_num, Task_type ttaskt):
-thread_taskt(ttaskt)
+pub_fd_queue(PUB_FD_QUEUE_SIZE), idle_threads_id(thread_num), 
+thread_taskt(ttaskt), stopping(false)
 { 
     wthreads.reserve(thread_num);
     for (int id = 0; id < thread_num; ++id)
@@ -18,11 +19,17 @@ thread_taskt(ttaskt)
             [this, id] { return callback_say_idle(id); }, 
             thread_taskt,
             id,
-            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)
+            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC),
+            stopping
         );
         idle_threads_id.push(id);
     }
     spdlog::info("create thread poll!");  
+}
+
+Tpool::~Tpool()
+{
+    shutdown();
 }
 
 std::vector<int> Tpool::callback_getfds()
@@ -30,10 +37,8 @@ std::vector<int> Tpool::callback_getfds()
     std::unique_lock<std::mutex> lock(pub_que_mtx);
     //每次取 EACH_FD_GET_NUM 个，提高锁效率
     std::vector<int> fds;
-    for(int max = EACH_FD_GET_NUM; max >= 0; --max)
+    for(int i = 0; i < EACH_FD_GET_NUM && !pub_fd_queue.empty(); ++i)
     {
-        if(pub_fd_queue.empty())
-            break;
         int fd = pub_fd_queue.front();
         pub_fd_queue.pop();
         fds.push_back(fd);
@@ -45,6 +50,16 @@ void Tpool::callback_say_idle(int id)
 {
     std::unique_lock<std::mutex> lock(idle_que_mtx);
     idle_threads_id.push(id);
+}
+
+void Tpool::shutdown()
+{
+    stopping.store(true, std::memory_order_relaxed);
+
+    for(auto& t : wthreads) {
+        uint64_t one = 1;
+        write(t.notify_fd, &one, sizeof(one));
+    }
 }
 
 void Tpool::accept_and_notice_thread(int connfd)

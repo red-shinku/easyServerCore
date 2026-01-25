@@ -1,9 +1,10 @@
 #pragma once
 
-#include <queue>
 #include <mutex>
+#include <atomic>
 #include <vector>
 #include <condition_variable>
+#include "cqueue.hpp"
 #include "WorkT.h"
 
 #define EACH_FD_GET_NUM 5
@@ -16,14 +17,13 @@ namespace easysv
 class Tpool
 {
 private:
-    //FIXME: 换为循环队列
-    std::queue<int> pub_fd_queue;
+    easysv::queue<int> pub_fd_queue;
     //a template of coroutine
     easysv::Task_type thread_taskt;
     //threads
     std::vector<easysv::WorkT> wthreads;
     //save idle thread's id(the index of wthreads)
-    std::queue<int> idle_threads_id; //FIXME: 循环队列
+    easysv::queue<int> idle_threads_id;
 
     std::mutex pub_que_mtx;
     std::mutex idle_que_mtx;
@@ -31,6 +31,11 @@ private:
 
     std::vector<int> callback_getfds() noexcept;
     void callback_say_idle(int id);
+
+    std::atomic<bool> stopping;
+
+    //wake up and close all thread
+    void shutdown();
 
 public:
     explicit Tpool(int thread_num, easysv::Task_type ttaskt);

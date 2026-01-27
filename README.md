@@ -88,7 +88,7 @@ sudo make install
 ```
 unistall:
 ```bash
-xargs rm -v < build/install_manifest.txt
+sudo xargs rm -v < build/install_manifest.txt
 ```
 
 ---
@@ -183,5 +183,5 @@ sudo make install
 ```
 卸载:
 ```bash
-xargs rm -v < build/install_manifest.txt
+sudo xargs rm -v < build/install_manifest.txt
 ```

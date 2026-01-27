@@ -15,7 +15,7 @@
 
 ## How to Use
 
-Include the header files`Server.h`、`config.h`。  
+Include the header files`easysv/Coro_scheduler.h`, and then:   
 
 1) **Define your logic:** Use`easysv::coro_t coro_func_name(easysv::Coro_scheduler& sched, int fd)`，to define a coroutine function.    
 2) **Handle Events:** Use`co_await easysv::Awaitable{sched, fd, next_epoll_event}` to specify which events your coroutine should wait for.  
@@ -27,10 +27,14 @@ Include the header files`Server.h`、`config.h`。
 
 1) **Create a server instance:**
 ```cpp
+#include <easysv/Server.h>
+
 easysv::Server s(port, listen_sock_queue_size);
 ```
 2) **Configure parameters:**
 ```cpp
+#include <easysv/config.h>
+
 struct Setting userset
 {
     //Number of connections a worker thread fetches per batch
@@ -49,6 +53,8 @@ struct Setting userset
 ```  
 3) **Define task information:**
 ```cpp
+#include <easysv/Types.h>
+
 easysv::Task_type your_task
 {
     .task_template = coro_func_name,
@@ -110,7 +116,7 @@ easyServerCore是一个TCP套接字服务器，基于较简单的**多线程epol
 
 ## 如何应用
 
-引入头文件`Server.h`、`config.h`。  
+引入头文件`easysv/Coro_scheduler.h`。  
 
 使用`easysv::coro_t coro_func_name(easysv::Coro_scheduler& sched, int fd)`，定义一个协程函数，并编写你的应用逻辑。  
 使用`co_await easysv::Awaitable{sched, fd, next_epoll_event}`，指出你的协程需要等待什么事件。  
@@ -120,10 +126,14 @@ easyServerCore是一个TCP套接字服务器，基于较简单的**多线程epol
 
 创建一个服务器实例：
 ```cpp
+#include <easysv/Server.h>
+
 easysv::Server s(port, listen_sock_queue_size);
 ```
 创建一个参数结构体并设置值：
 ```cpp
+#include <easysv/config.h>
+
 struct Setting userset
 {
     //工作线程单次获取的连接数
@@ -142,6 +152,8 @@ struct Setting userset
 ```  
 创建一个任务信息结构体：  
 ```cpp
+#include <easysv/Types.h>
+
 easysv::Task_type your_task
 {
     .task_template = coro_func_name,

@@ -16,6 +16,9 @@ private:
     std::vector<event_t> events;
     int epfd;
 
+    //this array create by outside, move in to handle
+    using fdarray_t = std::vector<std::pair<int, uint32_t>>;
+
 public:
     explicit Epoll(/* args */);
     ~Epoll();
@@ -24,9 +27,6 @@ public:
     
     Epoll(Epoll&&) = delete;
     Epoll& operator=(Epoll&&) = delete;
-
-    //this array create by outside, move in to handle
-    using fdarray_t = std::vector<std::pair<int, uint32_t>>;
 
     //epoll_create1
     void init();

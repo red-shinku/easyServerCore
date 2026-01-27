@@ -17,7 +17,7 @@
 
 Include the header files`easysv/Coro_scheduler.h`, and then:   
 
-1) **Define your logic:** Use`easysv::coro_t coro_func_name(easysv::Coro_scheduler& sched, int fd)`，to define a coroutine function.    
+1) **Define your logic:** Use`easysv::task coro_func_name(easysv::Coro_scheduler& sched, int fd)`，to define a coroutine function.    
 2) **Handle Events:** Use`co_await easysv::Awaitable{sched, fd, next_epoll_event}` to specify which events your coroutine should wait for.  
 3) **Finish:** Use`co_return` to signal the completion of a coroutine.    
 
@@ -118,7 +118,7 @@ easyServerCore是一个TCP套接字服务器，基于较简单的**多线程epol
 
 引入头文件`easysv/Coro_scheduler.h`。  
 
-使用`easysv::coro_t coro_func_name(easysv::Coro_scheduler& sched, int fd)`，定义一个协程函数，并编写你的应用逻辑。  
+使用`easysv::task coro_func_name(easysv::Coro_scheduler& sched, int fd)`，定义一个协程函数，并编写你的应用逻辑。  
 使用`co_await easysv::Awaitable{sched, fd, next_epoll_event}`，指出你的协程需要等待什么事件。  
 使用`co_return`表示完成一个协程。  
 

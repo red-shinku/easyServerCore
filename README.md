@@ -5,7 +5,8 @@
     * [Setup Steps](#setup-steps)
 3. [Implementation Details](#implementation-details)
 4. [Build](#build)
-5. [让我们说中文](#中文版请读我)
+5. [Announcement](#Announcement)
+6. [让我们说中文](#中文版请读我)
 
 ## What is this project?
 
@@ -97,6 +98,12 @@ unistall:
 sudo xargs rm -v < build/install_manifest.txt
 ```
 
+## Announcement
+
+This library can be used as a reference for learning or to conveniently build small projects.  
+There are still many shortcomings in the code.   
+Do not use this project in actual large-scale projects.
+
 ---
 
 # 中文版请读我！
@@ -105,7 +112,8 @@ sudo xargs rm -v < build/install_manifest.txt
 2. [如何应用](#如何应用)
 3. [具体实现](#具体实现)
 4. [构建](#构建)
-5. [let's speak English](#english-version-readme)
+5. [声明](#声明)
+6. [let's speak English](#english-version-readme)
 
 
 ## 本项目是什么？
@@ -197,3 +205,7 @@ sudo make install
 ```bash
 sudo xargs rm -v < build/install_manifest.txt
 ```
+
+## 声明
+
+本库可供学习参考，或便利地搭建小型项目。代码尚有许多不足之处。请勿将本项目用于实际大工程中。

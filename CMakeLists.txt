@@ -17,7 +17,7 @@ endif()
 # ===============================
 # Options
 # ===============================
-option(BUILD_SHARED_LIBS "Build as shared library" ON)
+option(BUILD_STATIC_LIBS "Build as static library" ON)
 
 # ===============================
 # spdlog (auto build)
@@ -53,7 +53,7 @@ file(GLOB_RECURSE EASYSV_SOURCES
 # ===============================
 # Library target
 # ===============================
-add_library(easysv SHARED
+add_library(easysv STATIC
     ${EASYSV_HEADERS}
     ${EASYSV_SOURCES}
 )
@@ -119,6 +119,6 @@ install(DIRECTORY include/
 # ===============================
 message(STATUS "\n=========== easysv build config ===========")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Shared lib: ${BUILD_SHARED_LIBS}")
+message(STATUS "STATIC lib: ${BUILD_STATIC_LIBS}")
 message(STATUS "CXX: ${CMAKE_CXX_COMPILER}")
 message(STATUS "==========================================\n")

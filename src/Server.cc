@@ -30,6 +30,7 @@ LISTENQ(listen_queue_size), tpool(NULL)
 Server::~Server()
 {
     delete tpool;
+    delete listen_epoll;
     close(listen_sock_fd);
     close(signal_fd);
 }
@@ -105,7 +106,8 @@ void Server::init(int thread_num, easysv::Task_type APP, struct Setting* userset
     {
         g_config = *userset;
 
-        listen_epoll.init();
+        listen_epoll = new Epoll();
+        listen_epoll->init();
 
         int opt = 1;
         setsockopt(listen_sock_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -133,8 +135,8 @@ void Server::init(int thread_num, easysv::Task_type APP, struct Setting* userset
             perror("signalfd");
             exit(EXIT_FAILURE);
         }
-        listen_epoll.register_fd(signal_fd, EPOLLIN);
-        listen_epoll.register_fd(listen_sock_fd, EPOLLIN);
+        listen_epoll->register_fd(signal_fd, EPOLLIN);
+        listen_epoll->register_fd(listen_sock_fd, EPOLLIN);
     }
     catch(const std::system_error& e)
     {
@@ -161,7 +163,7 @@ void Server::run()
     {
         try
         {
-            auto [fds, num] = listen_epoll.wait();
+            auto [fds, num] = listen_epoll->wait();
             for(int i = 0; i < num; ++i)
             {
                 if(fds[i].first == listen_sock_fd)

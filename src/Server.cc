@@ -8,6 +8,9 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+#include "../src/Tpool.h"
+#include "../src/Epoll.h"
+
 using namespace easysv;
 
 Setting g_config;

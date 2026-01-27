@@ -80,8 +80,17 @@ Run the following commands in the project root directory:
 mkdir -p build
 cd build
 cmake ..
-make
+make -j$(nproc)
 ```
+if you want to install it:
+```bash
+make install
+```
+unistall:
+```bash
+xargs rm -v < build/install_manifest.txt
+```
+
 ---
 
 # 中文版请读我！
@@ -166,5 +175,13 @@ https://study.fifseason.top/2026/01/22/%E5%A5%97%E6%8E%A5%E5%AD%97%E6%9C%8D%E5%8
 mkdir -p build
 cd build
 cmake ..
-make
+make -j$(nproc)
+```
+如果你想安装它：
+```bash
+make install
+```
+卸载:
+```bash
+xargs rm -v < build/install_manifest.txt
 ```

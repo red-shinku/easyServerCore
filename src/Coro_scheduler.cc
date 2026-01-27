@@ -1,18 +1,19 @@
-#include "Coro_scheduler.h"
+#include "../include/Coro_scheduler.h"
 
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include "../include/config.h"
+#include "Epoll.h"
 
 using namespace easysv;
 
 Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event, 
                             int& task_num, int notify_fd):
-epoll(), initial_care_event(initial_care_event), fdlist(), coros{}, 
+epoll(new Epoll()), initial_care_event(initial_care_event), fdlist(), coros{}, 
 ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
 {
     fdlist.resize(g_config.EventArraySize);
-    epoll.init();
+    epoll->init();
 }
 
 Coro_scheduler::~Coro_scheduler()
@@ -22,6 +23,7 @@ Coro_scheduler::~Coro_scheduler()
     {
         coro.second.coro_handle.destroy();
     }
+    delete epoll;
 }
 
 void Coro_scheduler::wait_event(int fd, handle_t coro_handle, EPOLL_EVENTS state)
@@ -31,7 +33,7 @@ void Coro_scheduler::wait_event(int fd, handle_t coro_handle, EPOLL_EVENTS state
     {
         if(coros.at(fd).state != state)
         {
-            epoll.change_fd_event(fd, state);
+            epoll->change_fd_event(fd, state);
             coros.at(fd).state = state;
         }
     }
@@ -54,7 +56,7 @@ void Coro_scheduler::__register_coro__(int fd, handle_t coro_handle)
         {
             FdDetail fddetail{coro_handle, initial_care_event};
             coros.emplace(fd, std::move(fddetail));
-            epoll.register_fd(fd, initial_care_event);
+            epoll->register_fd(fd, initial_care_event);
         }
         else
             spdlog::warn("Coro_scheduler::register_wait_read: The FD {} has been register", fd);
@@ -77,7 +79,7 @@ void Coro_scheduler::unregister_coro(int connfd, handle_t handle)
     {
         try
         {
-            epoll.deletefd(connfd);
+            epoll->deletefd(connfd);
             coros.erase(connfd);
             close(connfd); 
             spdlog::info("finish sock {}", connfd);
@@ -130,7 +132,7 @@ void Coro_scheduler::ready_next_run()
 {   //wait epoll
     try
     {
-        auto [rfdlist, rdynum] = epoll.wait(std::move(fdlist));
+        auto [rfdlist, rdynum] = epoll->wait(std::move(fdlist));
         this->fdlist = rfdlist;
         ready_num = rdynum;
     }
@@ -166,6 +168,6 @@ void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
 
 void Coro_scheduler::register_notify_fd(int efd)
 {
-    epoll.register_fd(efd, EPOLLIN);
+    epoll->register_fd(efd, EPOLLIN);
 }
 

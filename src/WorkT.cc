@@ -2,15 +2,16 @@
 
 #include <iostream>
 #include <spdlog/spdlog.h>
+#include "../include/config.h"
 
 using namespace easysv;
 
 WorkT::WorkT(std::function<std::vector<int>()> cback_getfd, 
                 std::function<void()> cback_sidle, Task_type& taskt, 
                 int id, int efd, std::atomic<bool>& stopping_flag) noexcept:
-task_num(0), taskt(taskt), getfd(cback_getfd), say_idle(cback_sidle), 
+notify_fd(efd), task_num(0), taskt(taskt), getfd(cback_getfd), 
 coro_sheduler(taskt.initial_care_event, task_num, notify_fd), 
-id(id), notify_fd(efd), stopping(stopping_flag)
+say_idle(cback_sidle), id(id), stopping(stopping_flag)
 { 
     worker = std::thread([this] { work(); });
     coro_sheduler.register_notify_fd(notify_fd);
@@ -55,7 +56,7 @@ void WorkT::work()
         handle_publicq();
         coro_sheduler.run();
 
-        if(task_num <= IS_IDLE_NUM && is_idle_now == false) 
+        if(task_num <= g_config.IS_IDLE_NUM && is_idle_now == false) 
         { //FIXME: 修改空闲定义
             is_idle_now = true;
             say_idle();

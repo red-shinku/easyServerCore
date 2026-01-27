@@ -5,7 +5,7 @@
 #include <functional>
 #include "Coro_scheduler.h"
 
-#define IS_IDLE_NUM 5 
+// #define IS_IDLE_NUM 5 
 
 namespace easysv
 {
@@ -18,6 +18,11 @@ typedef struct Task_type
 
 class WorkT
 {
+public:
+    /*eventfd for this thread, which be registered into 
+    epoll, Tpool write it to wake up thread when accept newfd*/
+    int notify_fd;
+
 private:
     int task_num;
     //what this thread should do
@@ -51,12 +56,8 @@ public:
     WorkT(const WorkT&) = delete;
     WorkT& operator=(const WorkT&) = delete;
 
-    WorkT(WorkT&&) = default;
-    WorkT& operator=(WorkT&&) = default;
-
-    /*eventfd for this thread, which be registered into 
-    epoll, Tpool write it to wake up thread when accept newfd*/
-    int notify_fd;
+    WorkT(WorkT&&) = delete;
+    WorkT& operator=(WorkT&&) = delete;
 
 };
 

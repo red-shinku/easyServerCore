@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 
 #include "../include/Server.h"
+#include "../include/config.h"
 
 using namespace easysv;
 
@@ -130,7 +131,17 @@ int main(int argc, char* argv[])
     web_task.task_template = http_coro;
     web_task.initial_care_event = EPOLLIN;
 
-    server.init(3, web_task);
+    //just a test , may not a good config set
+    struct Setting set 
+    {
+        .EACH_FD_GET_NUM = 5,
+        .PUB_FD_QUEUE_SIZE = 100,
+        .PUB_FD_QUEUE_CRITICAL = 10,
+        .IS_IDLE_NUM = 3,
+        .EventArraySize = 50,
+        .EPOLLMOD = EPOLLET
+    };
+    server.init(3, web_task, &set);
     server.run();
 
 }

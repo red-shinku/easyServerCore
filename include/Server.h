@@ -21,7 +21,7 @@ private:
     //thread pool to handle connected sock
     easysv::Tpool* tpool;
     //to tell listen_sock and some system signal
-    easysv::Epoll listen_epoll;
+    easysv::Epoll* listen_epoll;
 
     void tcpsv_socket();
     void tcpsv_bind();

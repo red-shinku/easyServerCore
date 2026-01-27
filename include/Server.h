@@ -3,12 +3,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "config.h"
-#include "../src/Tpool.h"
-#include "../src/WorkT.h"
 
 namespace easysv 
 {
-
+class Tpool;
 class Server
 {
 private:

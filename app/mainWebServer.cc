@@ -2,10 +2,13 @@
 #include <errno.h>
 #include <string>
 #include <cstring>
+#include <iostream>
 #include <sys/socket.h>
 
 #include "../include/Server.h"
 #include "../include/config.h"
+#include "../include/Coro_scheduler.h"
+#include "../include/Types.h"
 
 using namespace easysv;
 

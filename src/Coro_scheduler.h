@@ -95,8 +95,8 @@ public:
     Coro_scheduler(const Coro_scheduler&) = delete;
     Coro_scheduler& operator=(const Coro_scheduler&) = delete;
     
-    Coro_scheduler(Coro_scheduler&&) = default;
-    Coro_scheduler& operator=(Coro_scheduler&&) = default;
+    Coro_scheduler(Coro_scheduler&&) = delete;
+    Coro_scheduler& operator=(Coro_scheduler&&) = delete;
 
     //the thread's main coro
     void run();

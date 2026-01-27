@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <spdlog/spdlog.h>
+#include "../include/config.h"
 
 using namespace easysv;
 
@@ -10,6 +11,7 @@ Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event,
 epoll(), initial_care_event(initial_care_event), fdlist(), coros{}, 
 ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
 {
+    fdlist.resize(g_config.EventArraySize);
     epoll.init();
 }
 
@@ -77,7 +79,8 @@ void Coro_scheduler::unregister_coro(int connfd, handle_t handle)
         {
             epoll.deletefd(connfd);
             coros.erase(connfd);
-            close(connfd); //FIXME: 处理close出错
+            close(connfd); 
+            spdlog::info("finish sock {}", connfd);
         }
         catch(const std::system_error& e)
         {
@@ -104,7 +107,7 @@ void Coro_scheduler::run()
 {
     for(int i = 0; i < ready_num; ++i) {
         int fd = fdlist[i].first;
-        //遇到eventfd重置计数后跳过
+        //遇到eventfd重置计数为0后跳过
         if(fd == notify_fd)
         {
             uint64_t zero;

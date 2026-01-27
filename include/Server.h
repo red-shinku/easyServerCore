@@ -7,6 +7,9 @@
 namespace easysv 
 {
 class Tpool;
+class Epoll;
+class Task_type;
+
 class Server
 {
 private:

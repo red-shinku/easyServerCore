@@ -60,6 +60,7 @@ add_library(easysv SHARED
 # ===============================
 # Include directories
 # ===============================
+
 target_include_directories(easysv
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -106,7 +107,7 @@ install(TARGETS easysv
 )
 
 install(DIRECTORY include/
-    DESTINATION include
+    DESTINATION include/easysv
 )
 
 # ===============================

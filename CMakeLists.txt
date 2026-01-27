@@ -34,6 +34,7 @@ FetchContent_Declare(
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_BENCH OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(spdlog)
@@ -72,7 +73,7 @@ target_include_directories(easysv
 # ===============================
 target_link_libraries(easysv
     PUBLIC
-        spdlog::spdlog
+        spdlog::spdlog_header_only
         pthread
 )
 
@@ -96,6 +97,9 @@ set_target_properties(easysv PROPERTIES
     OUTPUT_NAME "easysv"
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "/usr/local/lib"
+    INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 
 # ===============================

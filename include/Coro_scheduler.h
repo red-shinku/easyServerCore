@@ -7,16 +7,16 @@
 // -----------------------------------------------------------------------
 #pragma once
 
+#include <sys/epoll.h>
 #include <cstdint>
 #include <unordered_map>
 #include <functional>
 #include <exception>
 #include <coroutine>
-#include "Epoll.h"
 
 namespace easysv 
 {
-
+class Epoll;
 class Coro_scheduler;
 
 class task 
@@ -53,7 +53,6 @@ public:
 
 using coro_t = task;
 using handle_t = std::coroutine_handle<task::promise_type>;
-using callable_coro_t = std::function<coro_t(Coro_scheduler&, int/*fd*/)>;
 
 typedef struct FdDetail
 {
@@ -69,9 +68,12 @@ class Coro_scheduler
     friend struct task;
 
 private:
-    Epoll epoll;
+    using callable_coro_t = std::function<coro_t(Coro_scheduler&, int/*fd*/)>;
+    using fdarray_t = std::vector<std::pair<int, uint32_t>>;
+
+    Epoll* epoll;
     EPOLL_EVENTS initial_care_event;
-    Epoll::fdarray_t fdlist; //{fd, care-event}
+    fdarray_t fdlist; //{fd, care-event}
     std::unordered_map<int, FdDetail> coros;
     std::vector<handle_t> ending_queue;
     int ready_num;

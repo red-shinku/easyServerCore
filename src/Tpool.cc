@@ -4,27 +4,28 @@
 #include <iostream>
 #include <stdexcept>
 #include <spdlog/spdlog.h>
+#include "../include/config.h"
 
 using namespace easysv;
 
 Tpool::Tpool(int thread_num, Task_type ttaskt):
-pub_fd_queue(PUB_FD_QUEUE_SIZE), idle_threads_id(thread_num), 
+pub_fd_queue(g_config.PUB_FD_QUEUE_SIZE), idle_threads_id(thread_num), 
 thread_taskt(ttaskt), stopping(false)
 { 
     wthreads.reserve(thread_num);
     for (int id = 0; id < thread_num; ++id)
     {
-        wthreads.emplace_back(
+        wthreads.emplace_back(std::make_unique<easysv::WorkT>(
             [this] { return callback_getfds(); }, 
             [this, id] { return callback_say_idle(id); }, 
             thread_taskt,
             id,
-            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC),
+            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC), //设置非阻塞
             stopping
-        );
+        ));
         idle_threads_id.push(id);
     }
-    spdlog::info("create thread poll!");  
+    spdlog::info("create thread pool!");  
 }
 
 Tpool::~Tpool()
@@ -37,7 +38,7 @@ std::vector<int> Tpool::callback_getfds()
     std::unique_lock<std::mutex> lock(pub_que_mtx);
     //每次取 EACH_FD_GET_NUM 个，提高锁效率
     std::vector<int> fds;
-    for(int i = 0; i < EACH_FD_GET_NUM && !pub_fd_queue.empty(); ++i)
+    for(int i = 0; i < g_config.EACH_FD_GET_NUM && !pub_fd_queue.empty(); ++i)
     {
         int fd = pub_fd_queue.front();
         pub_fd_queue.pop();
@@ -58,7 +59,7 @@ void Tpool::shutdown()
 
     for(auto& t : wthreads) {
         uint64_t one = 1;
-        write(t.notify_fd, &one, sizeof(one));
+        write(t->notify_fd, &one, sizeof(one));
     }
 }
 
@@ -81,9 +82,9 @@ void Tpool::accept_and_notice_thread(int connfd)
         // lock_idle_q.unlock();
         //notice the thread
         uint64_t one = 1;
-        write(wthreads[idle_id].notify_fd, &one, sizeof(one));
+        write(wthreads[idle_id]->notify_fd, &one, sizeof(one));
     }
-    else if(pub_fd_queue.size() < PUB_FD_QUEUE_CRITICAL)
+    else if(pub_fd_queue.size() < g_config.PUB_FD_QUEUE_CRITICAL)
     {
         return; //无人有空且新连接堆积较少
     }
@@ -92,6 +93,6 @@ void Tpool::accept_and_notice_thread(int connfd)
         //方案B: 没人有空且新连接堆积较多，轮转处理，该方案与条件变量方案冲突
         static int next = 0;
         uint64_t one = 1;
-        write(wthreads[next++ % wthreads.size()].notify_fd, &one, sizeof(one));
+        write(wthreads[next++ % wthreads.size()]->notify_fd, &one, sizeof(one));
     }
 }

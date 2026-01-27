@@ -3,13 +3,9 @@
 #include <mutex>
 #include <atomic>
 #include <vector>
-#include <condition_variable>
+#include <memory>
 #include "cqueue.hpp"
 #include "WorkT.h"
-
-#define EACH_FD_GET_NUM 5
-#define PUB_FD_QUEUE_SIZE 300 
-#define PUB_FD_QUEUE_CRITICAL 10
 
 namespace easysv
 {
@@ -21,7 +17,7 @@ private:
     //a template of coroutine
     easysv::Task_type thread_taskt;
     //threads
-    std::vector<easysv::WorkT> wthreads;
+    std::vector<std::unique_ptr<easysv::WorkT>> wthreads; 
     //save idle thread's id(the index of wthreads)
     easysv::queue<int> idle_threads_id;
 

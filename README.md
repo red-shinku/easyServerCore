@@ -84,7 +84,7 @@ make -j$(nproc)
 ```
 if you want to install it:
 ```bash
-make install
+sudo make install
 ```
 unistall:
 ```bash
@@ -179,7 +179,7 @@ make -j$(nproc)
 ```
 如果你想安装它：
 ```bash
-make install
+sudo make install
 ```
 卸载:
 ```bash

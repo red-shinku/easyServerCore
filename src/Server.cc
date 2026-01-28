@@ -100,7 +100,7 @@ int Server::tcpsv_accept()
     return connfd; 
 }
 
-void Server::init(int thread_num, easysv::Task_type APP, struct Setting* userset)
+void Server::init(int thread_num, easysv::Task_type* APP, struct Setting* userset)
 {
     try
     {
@@ -118,7 +118,7 @@ void Server::init(int thread_num, easysv::Task_type APP, struct Setting* userset
         tcpsv_socket();
         tcpsv_bind();
         tcpsv_listen();
-        tpool = new Tpool(thread_num, APP);
+        tpool = new Tpool(thread_num, *APP);
 
         sigset_t mask;
         sigemptyset(&mask);

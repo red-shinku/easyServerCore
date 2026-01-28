@@ -34,7 +34,7 @@ public:
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 
-    void init(int thread_num, easysv::Task_type APP, struct Setting*);
+    void init(int thread_num, easysv::Task_type* APP, struct Setting*);
     void run();
 
 };

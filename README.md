@@ -77,7 +77,7 @@ s.run();
 ## Implementation Details
 
 For an in-depth look at the implementation, please visit:  
- https://study.fifseason.top/2026/01/22/%E5%A5%97%E6%8E%A5%E5%AD%97%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%BC%80%E5%8F%91%E6%97%A5%E5%BF%97/
+https://study.fifseason.top/2026/01/22/socket_server_log/
 
 ## Build
 
@@ -185,7 +185,7 @@ s.run();
 ## 具体实现
 
 参阅   
-https://study.fifseason.top/2026/01/22/%E5%A5%97%E6%8E%A5%E5%AD%97%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%BC%80%E5%8F%91%E6%97%A5%E5%BF%97/
+https://study.fifseason.top/2026/01/22/socket_server_log/
 
 ## 构建
 

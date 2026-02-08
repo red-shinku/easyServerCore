@@ -1,12 +1,18 @@
 # English version ReadMe
 
-1. [What is this project?](#what-is-this-project)
-2. [How to Use](#how-to-use)
-    * [Setup Steps](#setup-steps)
-3. [Implementation Details](#implementation-details)
-4. [Build](#build)
-5. [Announcement](#Announcement)
-6. [让我们说中文](#中文版请读我)
+- [English version ReadMe](#english-version-readme)
+  - [What is this project?](#what-is-this-project)
+  - [How to Use](#how-to-use)
+    - [Use Steps](#use-steps)
+  - [Implementation Details](#implementation-details)
+  - [Build](#build)
+  - [Announcement](#announcement)
+- [中文版请读我！](#中文版请读我)
+  - [本项目是什么？](#本项目是什么)
+  - [如何应用](#如何应用)
+  - [具体实现](#具体实现)
+  - [构建](#构建)
+  - [声明](#声明)
 
 ## What is this project?
 
@@ -24,7 +30,7 @@ Include the header files`easysv/Coro_scheduler.h`, and then:
 
 **The user does not need to worry about the lifecycle management of coroutine handles.**  
 
-### Setup Steps
+### Use Steps
 
 1) **Create a server instance:**
 ```cpp
@@ -77,7 +83,7 @@ s.run();
 ## Implementation Details
 
 For an in-depth look at the implementation, please visit:  
-https://study.fifseason.top/2026/01/22/socket_server_log/
+https://study.fifseason.top/2026/01/22/easysv-log/
 
 ## Build
 
@@ -185,7 +191,7 @@ s.run();
 ## 具体实现
 
 参阅   
-https://study.fifseason.top/2026/01/22/socket_server_log/
+https://study.fifseason.top/2026/01/22/easysv-log/
 
 ## 构建
 

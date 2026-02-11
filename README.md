@@ -7,12 +7,7 @@
   - [Implementation Details](#implementation-details)
   - [Build](#build)
   - [Announcement](#announcement)
-- [中文版请读我！](#中文版请读我)
-  - [本项目是什么？](#本项目是什么)
-  - [如何应用](#如何应用)
-  - [具体实现](#具体实现)
-  - [构建](#构建)
-  - [声明](#声明)
+  - [让我们说中文](#中文版请读我)
 
 ## What is this project?
 

@@ -1,5 +1,8 @@
 #include "Tpool.h"
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/eventfd.h>
 #include <iostream>
 #include <stdexcept>
@@ -8,91 +11,90 @@
 
 using namespace easysv;
 
-Tpool::Tpool(int thread_num, Task_type ttaskt):
-pub_fd_queue(g_config.PUB_FD_QUEUE_SIZE), idle_threads_id(thread_num), 
+static int tcpsv_socket()
+{
+    int listen_sock_fd;
+    if((listen_sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        spdlog::error("failed to create sock");        
+        throw std::runtime_error("socket error");
+    }
+    return listen_sock_fd;
+}
+
+static void tcpsv_bind(int fd, struct sockaddr_in* servaddr)
+{
+    if((bind(fd, reinterpret_cast<struct sockaddr*>(servaddr), sizeof(*servaddr))) < 0)
+    {
+        spdlog::error("failed to bind sock with servaddr");
+        close(fd);
+        throw std::runtime_error("bind error");
+    }
+}
+
+static void tcpsv_listen(int listen_sock_fd)
+{
+    if((listen(listen_sock_fd, g_config.LISTENQ)) < 0)
+    {
+        spdlog::error("failed to set listen sock");
+        close(listen_sock_fd);
+        throw std::runtime_error("listen error");
+    }
+    //set non-block listen_fd
+    int flags = fcntl(listen_sock_fd, F_GETFL, 0);
+    if(flags == -1 || fcntl(listen_sock_fd, F_SETFL, flags | O_NONBLOCK) == -1) 
+    {
+        spdlog::error("Server::tcpsv_accept: fcntl error");
+        close(listen_sock_fd);
+        throw std::system_error(errno, std::system_category(), "fcntl error");
+    }
+}
+
+Tpool::Tpool(int thread_num, Task_type ttaskt, struct sockaddr_in* servaddr):
 thread_taskt(ttaskt), stopping(false)
 { 
     wthreads.reserve(thread_num);
+    //设置同端口、独立监听FD,以及作为通知作用的eventfd,并分发给线程
     for (int id = 0; id < thread_num; ++id)
     {
+        int listen_sock_fd = tcpsv_socket();
+
+        int opt = 1;
+        setsockopt(listen_sock_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#ifdef SO_REUSEPORT
+        setsockopt(listen_sock_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+        tcpsv_bind(listen_sock_fd, servaddr);
+        tcpsv_listen(listen_sock_fd);
+
         wthreads.emplace_back(std::make_unique<easysv::WorkT>(
-            [this] { return callback_getfds(); }, 
-            [this, id] { return callback_say_idle(id); }, 
+            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC), //设置非阻塞
+            listen_sock_fd,
             thread_taskt,
             id,
-            eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC), //设置非阻塞
             stopping
         ));
-        idle_threads_id.push(id);
     }
-    spdlog::info("create thread pool!");  
+    spdlog::info("main thread: thread pool ready!");  
 }
 
 Tpool::~Tpool()
-{
-    shutdown();
-}
-
-std::vector<int> Tpool::callback_getfds()
-{
-    std::unique_lock<std::mutex> lock(pub_que_mtx);
-    //每次取 EACH_FD_GET_NUM 个，提高锁效率
-    std::vector<int> fds;
-    for(int i = 0; i < g_config.EACH_FD_GET_NUM && !pub_fd_queue.empty(); ++i)
-    {
-        int fd = pub_fd_queue.front();
-        pub_fd_queue.pop();
-        fds.push_back(fd);
-    }
-    return std::move(fds);
-}
-
-void Tpool::callback_say_idle(int id)
-{
-    std::unique_lock<std::mutex> lock(idle_que_mtx);
-    idle_threads_id.push(id);
-}
+{ }
 
 void Tpool::shutdown()
 {
+    spdlog::info("main thread: close server...");
     stopping.store(true, std::memory_order_relaxed);
-
+    //唤醒并关闭线程
     for(auto& t : wthreads) {
         uint64_t one = 1;
-        write(t->notify_fd, &one, sizeof(one));
-    }
-}
-
-void Tpool::accept_and_notice_thread(int connfd)
-{
-    //一整个操作的原子性质
-    std::unique_lock<std::mutex> lock_pub_q(pub_que_mtx);
-    std::unique_lock<std::mutex> lock_idle_q(idle_que_mtx);
-
-    // while(pub_fd_queue.size() == PUB_FD_QUEUE_SIZE - 1 && idle_threads_id.empty())
-    // {
-        // idle_que_cv.wait(lock_pub_q);
-    // }
-    pub_fd_queue.push(connfd);
-
-    if(! idle_threads_id.empty())
-    {
-        auto idle_id = idle_threads_id.front();
-        idle_threads_id.pop();
-        // lock_idle_q.unlock();
-        //notice the thread
-        uint64_t one = 1;
-        write(wthreads[idle_id]->notify_fd, &one, sizeof(one));
-    }
-    else if(pub_fd_queue.size() < g_config.PUB_FD_QUEUE_CRITICAL)
-    {
-        return; //无人有空且新连接堆积较少
-    }
-    else
-    {
-        //方案B: 没人有空且新连接堆积较多，轮转处理，该方案与条件变量方案冲突
-        static int next = 0;
-        uint64_t one = 1;
-        write(wthreads[next++ % wthreads.size()]->notify_fd, &one, sizeof(one));
+        ssize_t s;
+        do {
+            s = write(t->notify_fd, &one, sizeof(one));
+        } while (s == -1 && errno == EINTR);
+        if (s == -1) 
+        {
+            spdlog::error("failed to write eventfd for thread: {}", strerror(errno));
+        }
     }
 }

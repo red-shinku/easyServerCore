@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     }
     int port = atoi(argv[1]);
 
-    Server server(port, 30);
+    Server server(port);
 
     Task_type web_task;
     web_task.task_template = http_coro;
@@ -137,14 +137,12 @@ int main(int argc, char* argv[])
     //just a test , may not a good config set
     struct Setting set 
     {
-        .EACH_FD_GET_NUM = 5,
-        .PUB_FD_QUEUE_SIZE = 100,
-        .PUB_FD_QUEUE_CRITICAL = 10,
-        .IS_IDLE_NUM = 3,
+        .LISTENQ = 40,
+        .EACH_ACCEPT_NUM = 5,
         .EventArraySize = 50,
         .EPOLLMOD = EPOLLET
     };
-    server.init(3, web_task, &set);
+    server.init(3, &web_task, &set);
     server.run();
 
 }

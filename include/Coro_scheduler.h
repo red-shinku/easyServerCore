@@ -14,8 +14,6 @@
 #include <exception>
 #include <coroutine>
 
-#include "../src/private_types.h"
-
 namespace easysv 
 {
 class Coro_scheduler;
@@ -70,6 +68,7 @@ class Coro_scheduler
 
 private:
     using callable_coro_t = std::function<coro_t(Coro_scheduler&, int/*fd*/)>;
+    using fdarray_t = std::vector<std::pair<int, uint32_t>>;
 
     EPOLL_EVENTS initial_care_event;
     std::unordered_map<int, FdDetail> coros;

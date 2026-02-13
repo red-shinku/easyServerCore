@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <thread>
 #include <atomic>
 #include "../include/Types.h"

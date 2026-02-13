@@ -1,7 +1,5 @@
 #include "WorkT.h"
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include "../include/config.h"

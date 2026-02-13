@@ -14,7 +14,7 @@
 #include <exception>
 #include <coroutine>
 
-#include "private_types.h"
+#include "../src/private_types.h"
 
 namespace easysv 
 {

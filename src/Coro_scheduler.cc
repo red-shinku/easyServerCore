@@ -8,13 +8,14 @@
 using namespace easysv;
 
 Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event, 
-                            int& task_num, int notify_fd):
-epoll(new Epoll()), initial_care_event(initial_care_event), fdlist(), coros{}, 
-ending_queue(), ready_num(0), task_num(task_num), notify_fd(notify_fd)
-{
-    fdlist.resize(g_config.EventArraySize);
-    epoll->init();
-}
+                            int listen_fd,
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_reg, 
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_ctl, 
+                            std::function<void(int)> ep_del):
+initial_care_event(initial_care_event), coros{}, 
+ending_queue(), listen_fd(listen_fd), 
+register_fd(ep_reg), change_fd_event(ep_ctl), unregister_fd(ep_del)
+{ }
 
 Coro_scheduler::~Coro_scheduler()
 {
@@ -23,7 +24,6 @@ Coro_scheduler::~Coro_scheduler()
     {
         coro.second.coro_handle.destroy();
     }
-    delete epoll;
 }
 
 void Coro_scheduler::wait_event(int fd, handle_t coro_handle, EPOLL_EVENTS state)
@@ -33,7 +33,7 @@ void Coro_scheduler::wait_event(int fd, handle_t coro_handle, EPOLL_EVENTS state
     {
         if(coros.at(fd).state != state)
         {
-            epoll->change_fd_event(fd, state);
+            change_fd_event(fd, state, 0);
             coros.at(fd).state = state;
         }
     }
@@ -56,7 +56,7 @@ void Coro_scheduler::__register_coro__(int fd, handle_t coro_handle)
         {
             FdDetail fddetail{coro_handle, initial_care_event};
             coros.emplace(fd, std::move(fddetail));
-            epoll->register_fd(fd, initial_care_event);
+            register_fd(fd, initial_care_event, g_config.EPOLLMOD);
         }
         else
             spdlog::warn("Coro_scheduler::register_wait_read: The FD {} has been register", fd);
@@ -79,16 +79,15 @@ void Coro_scheduler::unregister_coro(int connfd, handle_t handle)
     {
         try
         {
-            epoll->deletefd(connfd);
+            unregister_fd(connfd);
             coros.erase(connfd);
-            close(connfd); 
+            close(connfd);
             spdlog::info("finish sock {}", connfd);
         }
         catch(const std::system_error& e)
         {
             std::cerr << e.what() << '\n';
         }
-        --task_num;
     }
     else
     {
@@ -96,7 +95,7 @@ void Coro_scheduler::unregister_coro(int connfd, handle_t handle)
     }
 }
 
-void Coro_scheduler::destory_coro()
+void Coro_scheduler::clean_coro()
 {
     for(auto& handle: ending_queue)
     {
@@ -105,41 +104,19 @@ void Coro_scheduler::destory_coro()
     ending_queue.clear();
 }
 
-void Coro_scheduler::run()
+void Coro_scheduler::run(fdarray_t* readylist, int readynum)
 {
-    for(int i = 0; i < ready_num; ++i) {
-        int fd = fdlist[i].first;
-        //遇到eventfd重置计数为0后跳过
-        if(fd == notify_fd)
-        {
-            uint64_t zero;
-            read(fd, &zero, sizeof(zero));
-            continue;
-        }
+    for(int i = 0; i < readynum; ++i) {
+        int fd = (*readylist)[i].first;
         auto it = coros.find(fd);
         if (it == coros.end()) continue; //has been unregister
 
         auto &fddetail = it->second;
-        if( fdlist[i].second & (fddetail.state | EPOLLHUP | EPOLLRDHUP | EPOLLERR) ) {
+        if( (*readylist)[i].second & (fddetail.state | EPOLLHUP | EPOLLRDHUP | EPOLLERR) ) {
             fddetail.coro_handle.resume();
         }
     }
-    destory_coro();
-}
-
-
-void Coro_scheduler::ready_next_run()
-{   //wait epoll
-    try
-    {
-        auto [rfdlist, rdynum] = epoll->wait(std::move(fdlist));
-        this->fdlist = rfdlist;
-        ready_num = rdynum;
-    }
-    catch(const std::system_error& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
+    clean_coro();
 }
 
 void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
@@ -165,9 +142,3 @@ void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
     }
     
 }
-
-void Coro_scheduler::register_notify_fd(int efd)
-{
-    epoll->register_fd(efd, EPOLLIN);
-}
-

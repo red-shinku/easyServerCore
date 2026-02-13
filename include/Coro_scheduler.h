@@ -14,9 +14,10 @@
 #include <exception>
 #include <coroutine>
 
+#include "private_types.h"
+
 namespace easysv 
 {
-class Epoll;
 class Coro_scheduler;
 
 class task 
@@ -69,30 +70,33 @@ class Coro_scheduler
 
 private:
     using callable_coro_t = std::function<coro_t(Coro_scheduler&, int/*fd*/)>;
-    using fdarray_t = std::vector<std::pair<int, uint32_t>>;
 
-    Epoll* epoll;
     EPOLL_EVENTS initial_care_event;
-    fdarray_t fdlist; //{fd, care-event}
     std::unordered_map<int, FdDetail> coros;
     std::vector<handle_t> ending_queue;
-    int ready_num;
-    int& task_num;
-    int notify_fd;
+    int listen_fd;
+
+    //call epoll function 
+    std::function<void(int, EPOLL_EVENTS, uint32_t)> register_fd;
+    std::function<void(int, EPOLL_EVENTS, uint32_t)> change_fd_event;
+    std::function<void(int)> unregister_fd;
 
     //use in initial_suspend
     void __register_coro__(int fd, handle_t);
     //use in final_suspend, move the handle to ending queue
     void unregister_coro(int connfd, handle_t);
     //take handles in ending queue and destory it
-    void destory_coro();
+    void clean_coro();
 
     //method for coro to call in Await, when it suspend
     void wait_event(int fd, handle_t, EPOLL_EVENTS state);
 
 public:
     explicit Coro_scheduler(EPOLL_EVENTS initial_care_event, 
-                            int& task_num, int notify_fd);
+                            int listen_fd, 
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_reg, 
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_ctl, 
+                            std::function<void(int)> ep_del);
     ~Coro_scheduler() noexcept;
     Coro_scheduler(const Coro_scheduler&) = delete;
     Coro_scheduler& operator=(const Coro_scheduler&) = delete;
@@ -101,13 +105,11 @@ public:
     Coro_scheduler& operator=(Coro_scheduler&&) = delete;
 
     //the thread's main coro
-    void run();
-    void ready_next_run();
+    void run(fdarray_t* readylist, int readynum);
+    // void ready_next_run();
 
     //work thread call it to register coro
     void register_coro(int connfd, callable_coro_t coro);
-
-    void register_notify_fd(int efd);
 };
 
 struct Awaitable

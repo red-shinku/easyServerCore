@@ -31,8 +31,9 @@ public:
     //epoll_create1
     void init();
     //epoll_ctl
-    void register_fd(int fd, EPOLL_EVENTS care_event);
-    void change_fd_event(int fd, EPOLL_EVENTS care_event);
+    void register_fd(int fd, EPOLL_EVENTS care_event, 
+                    uint32_t EPOLLMOD);
+    void change_fd_event(int fd, EPOLL_EVENTS care_event, uint32_t EPOLLMOD);
     void deletefd(int fd);
     //epoll_wait
     std::tuple<fdarray_t, int> wait(fdarray_t&& fdlist);

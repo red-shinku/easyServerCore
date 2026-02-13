@@ -25,10 +25,10 @@ void Epoll::init()
     events.resize(g_config.EventArraySize);
 }
 
-void Epoll::register_fd(int fd, EPOLL_EVENTS care_event)
+void Epoll::register_fd(int fd, EPOLL_EVENTS care_event, uint32_t EPOLLMOD)
 {
     ev_sample.data.fd = fd;
-    ev_sample.events = care_event | g_config.EPOLLMOD;
+    ev_sample.events = care_event | EPOLLMOD;
     if(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev_sample) == -1)
     {
         spdlog::error("failed to add epoll");
@@ -40,10 +40,10 @@ void Epoll::register_fd(int fd, EPOLL_EVENTS care_event)
     }
 }
 
-void Epoll::change_fd_event(int fd, EPOLL_EVENTS care_event)
+void Epoll::change_fd_event(int fd, EPOLL_EVENTS care_event, uint32_t EPOLLMOD)
 {
     ev_sample.data.fd = fd;
-    ev_sample.events = care_event | g_config.EPOLLMOD;
+    ev_sample.events = care_event | EPOLLMOD;
     if(epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &ev_sample) == -1)
     {
         spdlog::error("failed to change epoll event");
@@ -71,16 +71,21 @@ void Epoll::deletefd(int fd)
 std::tuple<Epoll::fdarray_t, int> Epoll::wait(fdarray_t&& fdlist)
 {
     int n = 0;
-    //FIXME: epoll wait 返回EINTR时重试
-    if((n = epoll_wait(epfd, events.data(), g_config.EventArraySize, -1)) == -1)
+    do
+    {
+        n = epoll_wait(epfd, events.data(), g_config.EventArraySize, -1);
+    } while (n == -1 && errno == EINTR);
+    
+    if(n == -1 && errno != EINTR)
     {
         spdlog::error("failed from epoll_wait()");
         throw std::system_error(
             errno,                     
-            std::system_category(),
+            std::generic_category(),
             "Epoll.wait failed"   
         );
     }
+    
     for(int i =0; i< n; ++i)
     {
         fdlist[i].first = events[i].data.fd;
@@ -92,6 +97,8 @@ std::tuple<Epoll::fdarray_t, int> Epoll::wait(fdarray_t&& fdlist)
 std::tuple<Epoll::fdarray_t, int> Epoll::wait()
 {
     Epoll::fdarray_t fds(g_config.EventArraySize);
+    if (fds.size() < static_cast<size_t>(g_config.EventArraySize))
+        fds.resize(g_config.EventArraySize);
     return wait(std::move(fds));
 }
 

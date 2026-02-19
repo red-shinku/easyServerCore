@@ -109,7 +109,7 @@ void Coro_scheduler::run(fdarray_t* readylist, int readynum)
     for(int i = 0; i < readynum; ++i) {
         int fd = (*readylist)[i].first;
         auto it = coros.find(fd);
-        if (it == coros.end()) continue; //has been unregister
+        if (it == coros.end()) continue; //has been unregister or other fd
 
         auto &fddetail = it->second;
         if( (*readylist)[i].second & (fddetail.state | EPOLLHUP | EPOLLRDHUP | EPOLLERR) ) {

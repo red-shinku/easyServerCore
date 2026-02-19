@@ -4,6 +4,8 @@
   - [What is this project?](#what-is-this-project)
   - [How to Use](#how-to-use)
     - [Use Steps](#use-steps)
+  - [Attention](#Attention)
+  - [Benchmarking](#Benchmarking)
   - [Implementation Details](#implementation-details)
   - [Build](#build)
   - [Announcement](#announcement)
@@ -39,18 +41,14 @@ easysv::Server s(port, listen_sock_queue_size);
 
 struct Setting userset
 {
-    //Number of connections a worker thread fetches per batch
-    .EACH_FD_GET_NUM = //xx,
-    //Size of the public FD queue (for pending connections)
-    .PUB_FD_QUEUE_SIZE = //xx,
-    // Threshold for the public FD queue to be considered "backlogged"
-    .PUB_FD_QUEUE_CRITICAL = //xx,
-    //Task threshold for a worker thread to be considered "idle"
-    .IS_IDLE_NUM = //xx,
-    //Maximum number of events returned per epoll_wait call
-    .EventArraySize = //xx,
-    //Epoll mode
-    .EPOLLMOD = //like EPOLLET
+    //the size of listen sock queue
+    int LISTENQ;
+    //each time thread get nums of fd when socket accept
+    size_t EACH_ACCEPT_NUM;
+    //the max nums of fd epoll wait return
+    size_t EventArraySize;
+    //epoll mod -- LT(0) or ET(EPOLLET)
+    uint32_t EPOLLMOD;
 };
 ```  
 3) **Define task information:**
@@ -59,7 +57,9 @@ struct Setting userset
 
 easysv::Task_type your_task
 {
+    //your app corotinue_function
     .task_template = coro_func_name,
+    //your first event to wait
     .initial_care_event = EPOLL_EVENTS
 };
 ```
@@ -73,7 +73,52 @@ s.init(
 
 s.run();
 ```
->参考 /app/mainWebServer.cc
+>example at /app/mainWebServer.cc
+
+## Attention
+
+1) In the `EPOLLMOD setting of struct Setting`, use `0` to specify LT mode and `EPOLLET` for ET mode.
+2) This framework does not guarantee correctness under `epoll ET mode`; users must pay attention to and verify this themselves.  
+3) This framework is `event-driven + coroutine-based` and **does not incorporate** `zero-copy technology`.  
+4) Be aware of your process file descriptor limit (which determines the concurrency capacity); the default on Linux is 1024.  
+5) The framework uses `SO_REUSEPORT`. For systems that do not support it (e.g., Linux kernel versions prior to 3.9), users can use version one from the v1 branch.
+
+## Benchmarking
+
+（Exclude network latency / disk IO）：
+
+under 1000 concurrency single thread (use 100% core) ：
+```
+kktori@kotori ~ 
+❯ rewrk -d 20s -h http://192.168.100.21:19198/ -t 10 -c 1000  
+Beginning round 1...
+Benchmarking 1000 connections @ http://192.168.100.21:19198/ for 20 second(s)
+  Latencies:
+    Avg      Stdev    Min      Max      
+    9.85ms   1.03ms   0.11ms   102.38ms  
+  Requests:
+    Total: 2021291 Req/Sec: 101382.89
+  Transfer:
+    Total: 248.67 MB Transfer Rate: 12.47 MB/Sec
+```
+
+under 2000 concurrency single thread：
+```
+kktori@kotori ~ 
+❯ rewrk -d 20s -h http://192.168.100.21:19198/ -t 10 -c 2000 
+Beginning round 1...
+Benchmarking 2000 connections @ http://192.168.100.21:19198/ for 20 second(s)
+  Latencies:
+    Avg      Stdev    Min      Max      
+    20.54ms  2.25ms   0.03ms   169.58ms  
+  Requests:
+    Total: 1930922 Req/Sec: 96998.91
+  Transfer:
+    Total: 237.55 MB Transfer Rate: 11.93 MB/Sec
+```
+For multiple thread, QPS linear growth (when under 1000 concurrency, use 1.5 core(150%), it comes to 150k QPS).
+
+For more test data look https://study.fifseason.top/2026/02/07/easysv-test/
 
 ## Implementation Details
 
@@ -111,10 +156,12 @@ Do not use this project in actual large-scale projects.
 
 1. [本项目是什么?](#本项目是什么)
 2. [如何应用](#如何应用)
-3. [具体实现](#具体实现)
-4. [构建](#构建)
-5. [声明](#声明)
-6. [let's speak English](#english-version-readme)
+3. [注意事项](#注意事项)
+4. [基准测试](#基准测试)
+5. [具体实现](#具体实现)
+6. [构建](#构建)
+7. [免责声明](#免责声明)
+8. [let's speak English](#english-version-readme)
 
 
 ## 本项目是什么？
@@ -145,18 +192,14 @@ easysv::Server s(port, listen_sock_queue_size);
 
 struct Setting userset
 {
-    //工作线程单次获取的连接数
-    .EACH_FD_GET_NUM = //xx,
-    //公共fd（未开始处理）队列的大小
-    .PUB_FD_QUEUE_SIZE = //xx,
-    //公共fd队列进入过堆积状态的设定值（大于该数视为过堆积）
-    .PUB_FD_QUEUE_CRITICAL = //xx,
-    //工作线程进入空闲状态的任务数设定值（小于该数视为空闲）
-    .IS_IDLE_NUM = //xx,
-    //epoll wait每次返回的事件上限
-    .EventArraySize = //xx,
-    //epoll 模式
-    .EPOLLMOD = //like EPOLLET
+    //the size of listen sock queue
+    int LISTENQ;
+    //each time thread get nums of fd when accept
+    size_t EACH_ACCEPT_NUM;
+    //the max nums of fd epoll wait return
+    size_t EventArraySize;
+    //epoll mod -- LT(0) or ET(EPOLLET)
+    uint32_t EPOLLMOD;
 };
 ```  
 创建一个任务信息结构体：  
@@ -165,7 +208,9 @@ struct Setting userset
 
 easysv::Task_type your_task
 {
+    //your app corotinue_function
     .task_template = coro_func_name,
+    //your first event to wait
     .initial_care_event = EPOLL_EVENTS
 };
 ```
@@ -183,10 +228,56 @@ s.run();
 ```
 >参考 /app/mainWebServer.cc
 
+## 注意事项
+
+1) 在`struct Setting`的`EPOLLMOD`设置中，使用`0`指定LT模式，`EPOLLET`指定ET模式。
+2) 该框架不负责对 `epoll ET 模式`下的正确性保证，使用者须注意检查。  
+3) 该框架为事件驱动 + 协同例程，不包含零拷贝技术。  
+4) 注意你的进程文件描述符限制（关系到能承载多少并发），linux默认1024。  
+5) 框架使用 `SO_REUSEPORT`, 对于系统不支持的使用者（linux内核版本早于3.9的）可使用分支v1中的版本一。
+
+## 基准测试
+
+（排除网络延迟/磁盘IO时）：
+
+1000并发下（用满1核）：
+```
+kktori@kotori ~ 
+❯ rewrk -d 20s -h http://192.168.100.21:19198/ -t 10 -c 1000  
+Beginning round 1...
+Benchmarking 1000 connections @ http://192.168.100.21:19198/ for 20 second(s)
+  Latencies:
+    Avg      Stdev    Min      Max      
+    9.85ms   1.03ms   0.11ms   102.38ms  
+  Requests:
+    Total: 2021291 Req/Sec: 101382.89
+  Transfer:
+    Total: 248.67 MB Transfer Rate: 12.47 MB/Sec
+
+```
+
+2000并发下：
+```
+kktori@kotori ~ 
+❯ rewrk -d 20s -h http://192.168.100.21:19198/ -t 10 -c 2000 
+Beginning round 1...
+Benchmarking 2000 connections @ http://192.168.100.21:19198/ for 20 second(s)
+  Latencies:
+    Avg      Stdev    Min      Max      
+    20.54ms  2.25ms   0.03ms   169.58ms  
+  Requests:
+    Total: 1930922 Req/Sec: 96998.91
+  Transfer:
+    Total: 237.55 MB Transfer Rate: 11.93 MB/Sec
+
+```
+对于多线程，可以预计QPS在一定程度内线性增长。（1000并发下，使用1.5核达到150k QPS）。
+
+详细数据见  https://study.fifseason.top/2026/02/07/easysv-test/
+
 ## 具体实现
 
-参阅   
-https://study.fifseason.top/2026/01/22/easysv-log/
+参阅   https://study.fifseason.top/2026/01/22/easysv-log/
 
 ## 构建
 
@@ -207,6 +298,6 @@ sudo make install
 sudo xargs rm -v < build/install_manifest.txt
 ```
 
-## 声明
+## 免责声明
 
-本库可供学习参考，或便利地搭建小型项目。代码尚有许多不足之处。请勿将本项目用于实际大工程中。
+本库可供学习参考，或便利地搭建中小型项目。代码尚有许多不足之处。请勿将本项目用于实际大工程中。

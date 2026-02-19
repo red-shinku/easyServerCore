@@ -57,6 +57,7 @@ int WorkT::tcpsv_accept()
         if (errno == EAGAIN || errno == EWOULDBLOCK) return -1; // no more
         if (errno == EINTR) continue; // retry
         spdlog::error("accept failed: {}", strerror(errno));
+        throw std::runtime_error("error at tcpsv_accept");
         return -1;
     }
     //set non-block I/O
@@ -87,23 +88,30 @@ void WorkT::work()
         {
             if(readylist[i].first == listen_sock_fd)
             {
-                for(int j = 0; j < g_config.EACH_ACCEPT_NUM; ++j)
+                try
                 {
-                    int connfd;
-                    try
+                    for(int j = 0; j < g_config.EACH_ACCEPT_NUM; ++j)
                     {
-                        while((connfd = tcpsv_accept()) > 0)
+                        int connfd;
+                        if((connfd = tcpsv_accept()) > 0)
                             coro_sheduler.register_coro(connfd, taskt.task_template);
-                    }
-                    catch(const std::system_error& e)
-                    {
-                        std::cerr << e.what() << '\n';
+                        else
+                            break;
                     }
                 }
+                catch(const std::system_error& e)
+                {
+                    std::cerr << e.what() << '\n';
+                }
+                catch(const std::runtime_error& e)
+                {
+                    std::cerr << e.what() << '\n';
+                    //TODO: 过载策略：一个标志位在下一轮跳过accept
+                }              
                 break;
             }
-            else if (readylist[i].first == notify_fd) {
-        // drain eventfd
+            else if (readylist[i].first == notify_fd) 
+            {
                 uint64_t v;
                 while (true) {
                     ssize_t n = read(notify_fd, &v, sizeof(v));

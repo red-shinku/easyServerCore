@@ -21,7 +21,7 @@ private:
     easysv::Epoll* main_epoll;
 
 public:
-    explicit Server(int port);
+    explicit Server(const char* ip, int port);
     ~Server() noexcept;
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;

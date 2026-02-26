@@ -1,5 +1,8 @@
 #include "../include/Server.h"
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/signalfd.h>
 #include <signal.h>
 #include <string.h>
@@ -15,12 +18,17 @@ using namespace easysv;
 
 Setting g_config;
 
-Server::Server(int port):
+Server::Server(const char* ip, int port):
 tpool(NULL)
 {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [thread %t] %v");
     //FIXME: 开启文件日志
     bzero(&servaddr, sizeof(servaddr));
+    if(inet_pton(AF_INET, ip, &servaddr.sin_addr) <= 0)
+    {
+        perror("invailed IP address!!!");
+        exit(-1);
+    }
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY); //handle all ip on this os
     servaddr.sin_port = htons(port);

@@ -33,7 +33,7 @@ Include the header files`easysv/Coro_scheduler.h`, and then:
 ```cpp
 #include <easysv/Server.h>
 
-easysv::Server s(port, listen_sock_queue_size);
+easysv::Server s(const char* IP, int port);
 ```
 2) **Configure parameters:**
 ```cpp
@@ -184,7 +184,7 @@ easyServerCore是一个TCP套接字服务器，基于较简单的**多线程epol
 ```cpp
 #include <easysv/Server.h>
 
-easysv::Server s(port, listen_sock_queue_size);
+easysv::Server s(const char* IP, int port);
 ```
 创建一个参数结构体并设置值：
 ```cpp

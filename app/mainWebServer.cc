@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     }
     int port = atoi(argv[1]);
 
-    Server server(port);
+    Server server("127.0.0.1", port);
 
     Task_type web_task;
     web_task.task_template = http_coro;

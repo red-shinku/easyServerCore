@@ -5,7 +5,7 @@
 #include <thread>
 #include <atomic>
 #include "../include/Types.h"
-#include "../include/Coro_scheduler.h"
+#include "Coro_scheduler_int.h"
 #include "Epoll.h"
 #include "private_types.h"
 
@@ -33,9 +33,6 @@ private:
     int id;
 
     struct sockaddr_in client_addr;
-
-    void register_coro(int fd);
-    void del_fd_in_epoll(int fd);
 
     //listen sock accept
     int tcpsv_accept();

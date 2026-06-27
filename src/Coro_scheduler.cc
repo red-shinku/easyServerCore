@@ -1,25 +1,88 @@
-#include "../include/Coro_scheduler.h"
+#include "Coro_scheduler_int.h"
 
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include "../include/config.h"
-#include "Epoll.h"
 
 using namespace easysv;
 
-Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event, 
+// ======================================================================
+// task::promise_type
+// ======================================================================
+
+task::promise_type::promise_type(Coro_scheduler& sched, int connfd):
+sched(sched), connfd(connfd) { }
+
+task task::promise_type::get_return_object()
+{
+    return task{ std::coroutine_handle<promise_type>::from_promise(*this) };
+}
+
+AwaitInit task::promise_type::initial_suspend() noexcept
+{
+    return AwaitInit{};
+}
+
+AwaitFin task::promise_type::final_suspend() noexcept
+{
+    return AwaitFin{};
+}
+
+// ======================================================================
+// AwaitInit — registers the fd in Coro_scheduler when coroutine starts.
+// ======================================================================
+
+void AwaitInit::await_suspend(std::coroutine_handle<task::promise_type> h)
+{
+    h.promise().sched.__register_coro__(
+        h.promise().connfd,
+        h
+    );
+}
+
+// ======================================================================
+// AwaitFin  — moves the handle into the ending queue when coroutine
+//             completes (co_return / co_await with EPOLLERR / EPOLLHUP).
+// ======================================================================
+
+void AwaitFin::await_suspend(std::coroutine_handle<task::promise_type> h) noexcept
+{
+    h.promise().sched.unregister_coro(
+        h.promise().connfd,
+        h
+    );
+}
+
+// ======================================================================
+// Awaitable
+// ======================================================================
+
+Awaitable::Awaitable(Coro_scheduler& sched, int fd, EPOLL_EVENTS care_event):
+sched(sched), fd(fd), care_event(care_event) { }
+
+void Awaitable::await_suspend(handle_t coro_han)
+{
+    sched.wait_event(fd, coro_han, care_event);
+}
+
+// ======================================================================
+// Coro_scheduler
+// ======================================================================
+
+Coro_scheduler::Coro_scheduler(EPOLL_EVENTS initial_care_event,
                             int listen_fd,
-                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_reg, 
-                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_ctl, 
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_reg,
+                            std::function<void(int, EPOLL_EVENTS, uint32_t)> ep_ctl,
                             std::function<void(int)> ep_del):
-initial_care_event(initial_care_event), coros{}, 
-ending_queue(), listen_fd(listen_fd), 
-register_fd(ep_reg), change_fd_event(ep_ctl), unregister_fd(ep_del)
+initial_care_event(initial_care_event),
+listen_fd(listen_fd),
+register_fd(std::move(ep_reg)),
+change_fd_event(std::move(ep_ctl)),
+unregister_fd(std::move(ep_del))
 { }
 
 Coro_scheduler::~Coro_scheduler()
 {
-    //destroy all corotinues
     for(auto &coro: coros)
     {
         coro.second.coro_handle.destroy();
@@ -28,7 +91,6 @@ Coro_scheduler::~Coro_scheduler()
 
 void Coro_scheduler::wait_event(int fd, handle_t coro_handle, EPOLL_EVENTS state)
 {
-    //如果状态变化修改epoll
     try
     {
         if(coros.at(fd).state != state)
@@ -128,17 +190,17 @@ void Coro_scheduler::register_coro(int connfd, callable_coro_t coro)
             coro(
                 [this]() -> Coro_scheduler& { return *this; } (),
                 connfd
-            ); 
+            );
         }
         else
         {
             spdlog::warn("Register an existing Fd in coros map");
-        }   
+        }
     }
     catch(const std::bad_alloc& e)
     {
         spdlog::error("out of memory: coros map");
         std::cerr << e.what() << '\n';
     }
-    
+
 }

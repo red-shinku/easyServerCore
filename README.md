@@ -4,12 +4,19 @@
   - [What is this project?](#what-is-this-project)
   - [How to Use](#how-to-use)
     - [Use Steps](#use-steps)
-  - [Attention](#Attention)
-  - [Benchmarking](#Benchmarking)
+  - [Attention](#attention)
+  - [Benchmarking](#benchmarking)
   - [Implementation Details](#implementation-details)
   - [Build](#build)
   - [Announcement](#announcement)
-  - [让我们说中文](#中文版请读我)
+- [中文版请读我！](#中文版请读我)
+  - [本项目是什么？](#本项目是什么)
+  - [如何应用](#如何应用)
+  - [注意事项](#注意事项)
+  - [基准测试](#基准测试)
+  - [具体实现](#具体实现)
+  - [构建](#构建)
+  - [免责声明](#免责声明)
 
 ## What is this project?
 
@@ -118,12 +125,12 @@ Benchmarking 2000 connections @ http://192.168.100.21:19198/ for 20 second(s)
 ```
 For multiple thread, QPS linear growth (when under 1000 concurrency, use 1.5 core(150%), it comes to 150k QPS).
 
-For more test data look https://study.fifseason.top/2026/02/07/easysv-test/
+For more test data look https://study.fifseason.top/posts/easysv-test/
 
 ## Implementation Details
 
 For an in-depth look at the implementation, please visit:  
-https://study.fifseason.top/2026/01/22/easysv-log/
+https://study.fifseason.top/posts/easysv-log/
 
 ## Build
 
@@ -273,11 +280,11 @@ Benchmarking 2000 connections @ http://192.168.100.21:19198/ for 20 second(s)
 ```
 对于多线程，可以预计QPS在一定程度内线性增长。（1000并发下，使用1.5核达到150k QPS）。
 
-详细数据见  https://study.fifseason.top/2026/02/07/easysv-test/
+详细数据见  https://study.fifseason.top/posts/easysv-test/
 
 ## 具体实现
 
-参阅   https://study.fifseason.top/2026/01/22/easysv-log/
+参阅   https://study.fifseason.top/posts/easysv-log/
 
 ## 构建
 
